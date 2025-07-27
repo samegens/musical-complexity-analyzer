@@ -10,10 +10,10 @@ fn main() {
     match read_score_partwise(&args[1]) {
         Ok(score) => {
             println!("=== MusicXML DOM Structure ===");
-            println!("{:#?}", score);
+            println!("{score:#?}");
         }
         Err(e) => {
-            eprintln!("Error parsing MusicXML: {}", e);
+            eprintln!("Error parsing MusicXML: {e}");
             std::process::exit(1);
         }
     }
