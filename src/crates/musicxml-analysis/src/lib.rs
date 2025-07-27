@@ -11,10 +11,10 @@ mod tests {
         // Arrange
         let total_notes = 4;
         let duration_seconds = 8.0;
-        
+
         // Act
         let actual = calculate_note_density(total_notes, duration_seconds);
-        
+
         // Assert
         let expected = 0.5;
         assert_eq!(actual, expected);
