@@ -1,0 +1,5 @@
+[workspace]
+members = [
+    "src/crates/musicxml-analysis",
+    "src/apps/musicxml-analyzer"
+]
