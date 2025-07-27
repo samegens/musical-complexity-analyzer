@@ -1,2 +1,7 @@
 # Rust generated files/directories
 target/
+
+# Code coverage reports
+*.html
+*.xml
+codecov.json
