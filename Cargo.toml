@@ -3,3 +3,4 @@ members = [
     "src/crates/musicxml-analysis",
     "src/apps/musicxml-analyzer"
 ]
+resolver = "3"
