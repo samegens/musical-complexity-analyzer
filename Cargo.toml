@@ -1,6 +1,6 @@
 [workspace]
 members = [
     "src/crates/musicxml-analysis",
-    "src/apps/musicxml-analyzer"
-]
+    "src/apps/musicxml-analyzer",
+    "src/tools/dump-musicxml-dom"]
 resolver = "3"
