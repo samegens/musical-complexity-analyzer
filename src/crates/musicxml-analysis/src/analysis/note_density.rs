@@ -14,36 +14,39 @@ pub fn analyze_note_density(score: &ScorePartwise) -> DensityMetrics {
     const DEFAULT_BPM: f64 = 120.0;
     const DEFAULT_BEATS_PER_MEASURE: f64 = 4.0; // 4/4 time
 
-    // Calculate measure duration in seconds
     let seconds_per_beat = 60.0 / DEFAULT_BPM;
     let seconds_per_measure = seconds_per_beat * DEFAULT_BEATS_PER_MEASURE;
 
     let mut total_notes = 0;
     let mut total_measures = 0;
+    let mut peak_notes_per_second = 0.0;
 
     for part in &score.content.part {
         for part_element in &part.content {
             if let PartElement::Measure(measure) = part_element {
                 total_measures += 1;
 
-                total_notes += get_nr_notes_in_measure(measure);
+                let notes_in_measure = get_nr_notes_in_measure(measure);
+                total_notes += notes_in_measure;
+
+                let measure_density = notes_in_measure as f64 / seconds_per_measure;
+                if measure_density > peak_notes_per_second {
+                    peak_notes_per_second = measure_density;
+                }
             }
         }
     }
 
     let total_duration_seconds = total_measures as f64 * seconds_per_measure;
-    let average_density = if total_duration_seconds > 0.0 {
+    let average_notes_per_second = if total_duration_seconds > 0.0 {
         total_notes as f64 / total_duration_seconds
     } else {
         0.0
     };
 
-    // For now, peak = average (single measure)
-    let peak_density = average_density;
-
     DensityMetrics {
-        average_notes_per_second: average_density,
-        peak_notes_per_second: peak_density,
+        average_notes_per_second,
+        peak_notes_per_second,
     }
 }
 
@@ -103,17 +106,30 @@ mod tests {
         assert_float_absolute_eq!(metrics.peak_notes_per_second, 1.0, 0.001);
     }
 
+    #[test]
+    fn test_analyze_note_density_peak_detection() {
+        // Arrange
+        let score = create_musicxml_dom_with_two_measures_with_varying_density();
+
+        // Act
+        let metrics = analyze_note_density(&score);
+
+        // Assert
+        assert_float_absolute_eq!(metrics.average_notes_per_second, 1.25); // (1+4)/2 measures = 5 notes / 4 seconds
+        assert_float_absolute_eq!(metrics.peak_notes_per_second, 2.0); // 4 notes in 2 seconds
+    }
+
     fn create_empty_musicxml_dom() -> ScorePartwise {
         let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
 <score-partwise version="4.0">
-<part-list>
-<score-part id="P1">
-<part-name>Test</part-name>
-</score-part>
-</part-list>
-<part id="P1">
-</part>
+  <part-list>
+    <score-part id="P1">
+      <part-name>Test</part-name>
+    </score-part>
+  </part-list>
+  <part id="P1">
+  </part>
 </score-partwise>"#;
 
         parse_musicxml_to_dom(xml)
@@ -123,31 +139,91 @@ mod tests {
         let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
 <score-partwise version="4.0">
-<part-list>
-<score-part id="P1">
-<part-name>Test</part-name>
-</score-part>
-</part-list>
-<part id="P1">
-<measure number="1">
-<note>
-<pitch>
-<step>C</step>
-<octave>4</octave>
-</pitch>
-<duration>1</duration>
-<type>quarter</type>
-</note>
-<note>
-<pitch>
-<step>D</step>
-<octave>4</octave>
-</pitch>
-<duration>1</duration>
-<type>quarter</type>
-</note>
-</measure>
-</part>
+  <part-list>
+    <score-part id="P1">
+      <part-name>Test</part-name>
+    </score-part>
+  </part-list>
+  <part id="P1">
+    <measure number="1">
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>1</duration>
+        <type>quarter</type>
+      </note>
+      <note>
+        <pitch>
+          <step>D</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>1</duration>
+        <type>quarter</type>
+      </note>
+    </measure>
+  </part>
+</score-partwise>"#;
+
+        parse_musicxml_to_dom(xml)
+    }
+
+    fn create_musicxml_dom_with_two_measures_with_varying_density() -> ScorePartwise {
+        let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
+<score-partwise version="4.0">
+ <part-list>
+   <score-part id="P1">
+     <part-name>Test</part-name>
+   </score-part>
+ </part-list>
+ <part id="P1">
+   <measure number="1">
+     <note>
+       <pitch>
+         <step>C</step>
+         <octave>4</octave>
+       </pitch>
+       <duration>1</duration>
+       <type>quarter</type>
+     </note>
+   </measure>
+   <measure number="2">
+     <note>
+       <pitch>
+         <step>D</step>
+         <octave>4</octave>
+       </pitch>
+       <duration>1</duration>
+       <type>quarter</type>
+     </note>
+     <note>
+       <pitch>
+         <step>E</step>
+         <octave>4</octave>
+       </pitch>
+       <duration>1</duration>
+       <type>quarter</type>
+     </note>
+     <note>
+       <pitch>
+         <step>F</step>
+         <octave>4</octave>
+       </pitch>
+       <duration>1</duration>
+       <type>quarter</type>
+     </note>
+     <note>
+       <pitch>
+         <step>G</step>
+         <octave>4</octave>
+       </pitch>
+       <duration>1</duration>
+       <type>quarter</type>
+     </note>
+   </measure>
+ </part>
 </score-partwise>"#;
 
         parse_musicxml_to_dom(xml)
