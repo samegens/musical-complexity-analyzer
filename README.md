@@ -1,5 +1,8 @@
 # Music Complexity Analyzer
 
+[![CI](https://github.com/samegens/musical-complexity-analyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/samegens/musical-complexity-analyzer/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/samegens/musical-complexity-analyzer/branch/main/graph/badge.svg)](https://codecov.io/gh/samegens/musical-complexity-analyzer)
+
 This tool takes a MusicXML file and determines the musical complexity.
 
 ## Metrics
