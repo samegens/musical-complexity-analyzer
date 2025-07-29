@@ -206,7 +206,7 @@ mod tests {
         let bpm = 60.0;
         let measures_per_minute = bpm / 4.0;
         let seconds_per_measure = 60.0 / measures_per_minute;
-        assert_float_absolute_eq!(metrics.average_notes_per_second, 2 / seconds_per_measure);
+        assert_float_absolute_eq!(metrics.average_notes_per_second, 2.0 / seconds_per_measure);
         assert_float_absolute_eq!(metrics.peak_notes_per_second, 0.5);
     }
 
