@@ -84,6 +84,10 @@ dependencies = [
 [[package]]
 name = "musicxml-analyzer"
 version = "0.1.0"
+dependencies = [
+ "musicxml",
+ "musicxml-analysis",
+]
 
 [[package]]
 name = "musicxml_internal"
