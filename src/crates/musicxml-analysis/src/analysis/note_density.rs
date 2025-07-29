@@ -1,6 +1,6 @@
 use musicxml::{
     datatypes::NoteTypeValue,
-    elements::{BeatUnit, Measure, MeasureElement, MetronomeContents, PartElement, ScorePartwise},
+    elements::{Measure, MeasureElement, MetronomeContents, PartElement, ScorePartwise},
 };
 
 #[derive(Debug, PartialEq)]
@@ -70,6 +70,12 @@ fn extract_bpm_from_score(score: &ScorePartwise) -> f64 {
 fn extract_bpm_from_measure(measure: &Measure) -> Option<f64> {
     for measure_content in &measure.content {
         if let MeasureElement::Direction(direction) = measure_content {
+            if let Some(sound) = &direction.content.sound {
+                if let Some(tempo) = &sound.attributes.tempo {
+                    return Some(**tempo);
+                }
+            }
+
             for direction_type in &direction.content.direction_type {
                 if let musicxml::elements::DirectionTypeContents::Metronome(metronome) =
                     &direction_type.content
@@ -187,6 +193,23 @@ mod tests {
         assert_float_absolute_eq!(metrics.peak_notes_per_second, 0.5); // same for single measure
     }
 
+    #[test]
+    fn test_analyze_note_density_sound_tempo_overrides_metronome() {
+        // Arrange
+        let score =
+            create_score_with_two_quarter_notes_60bpm_in_sound_tempo_and_120bpm_in_metronome();
+
+        // Act
+        let metrics = analyze_note_density(&score);
+
+        // Assert
+        let bpm = 60.0;
+        let measures_per_minute = bpm / 4.0;
+        let seconds_per_measure = 60.0 / measures_per_minute;
+        assert_float_absolute_eq!(metrics.average_notes_per_second, 2 / seconds_per_measure);
+        assert_float_absolute_eq!(metrics.peak_notes_per_second, 0.5);
+    }
+
     fn create_empty_musicxml_dom() -> ScorePartwise {
         let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
@@ -253,6 +276,50 @@ mod tests {
           <metronome>
             <beat-unit>quarter</beat-unit>
             <per-minute>60</per-minute>
+          </metronome>
+        </direction-type>
+      </direction>
+      <note>
+        <pitch>
+          <step>C</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>1</duration>
+        <type>quarter</type>
+      </note>
+      <note>
+        <pitch>
+          <step>D</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>1</duration>
+        <type>quarter</type>
+      </note>
+    </measure>
+  </part>
+</score-partwise>"#;
+
+        parse_musicxml_to_dom(xml)
+    }
+
+    fn create_score_with_two_quarter_notes_60bpm_in_sound_tempo_and_120bpm_in_metronome()
+    -> ScorePartwise {
+        let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
+<score-partwise version="4.0">
+  <part-list>
+    <score-part id="P1">
+      <part-name>Test</part-name>
+    </score-part>
+  </part-list>
+  <part id="P1">
+    <measure number="1">
+      <direction>
+        <sound tempo="60"/>
+        <direction-type>
+          <metronome>
+            <beat-unit>quarter</beat-unit>
+            <per-minute>120</per-minute>
           </metronome>
         </direction-type>
       </direction>
