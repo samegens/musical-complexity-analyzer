@@ -13,21 +13,24 @@ pub fn analyze_note_density(score: &ScorePartwise) -> DensityMetrics {
     let (beats, _beat_type) = extract_time_signature_from_score(score);
     let beats_per_measure = beats as f64;
 
-    let bpm = extract_bpm_from_score(score);
-    let seconds_per_beat = 60.0 / bpm;
-    let seconds_per_measure = seconds_per_beat * beats_per_measure;
-
+    let mut current_bpm = extract_bpm_from_score(score);
     let mut total_notes = 0;
-    let mut total_measures = 0;
+    let mut total_duration_seconds = 0.0;
     let mut peak_notes_per_second = 0.0;
 
     for part in &score.content.part {
         for part_element in &part.content {
             if let PartElement::Measure(measure) = part_element {
-                total_measures += 1;
+                if let Some(new_bpm) = extract_bpm_from_measure(measure) {
+                    current_bpm = new_bpm;
+                }
+
+                let seconds_per_beat = 60.0 / current_bpm;
+                let seconds_per_measure = seconds_per_beat * beats_per_measure;
 
                 let notes_in_measure = get_nr_notes_in_measure(measure);
                 total_notes += notes_in_measure;
+                total_duration_seconds += seconds_per_measure;
 
                 let measure_density = notes_in_measure as f64 / seconds_per_measure;
                 if measure_density > peak_notes_per_second {
@@ -37,7 +40,6 @@ pub fn analyze_note_density(score: &ScorePartwise) -> DensityMetrics {
         }
     }
 
-    let total_duration_seconds = total_measures as f64 * seconds_per_measure;
     let average_notes_per_second = if total_duration_seconds > 0.0 {
         total_notes as f64 / total_duration_seconds
     } else {
@@ -252,6 +254,23 @@ mod tests {
         // - 3 quarter notes in one measure = 3 notes / 1.5 seconds = 2.0 notes per second
         assert_float_absolute_eq!(metrics.average_notes_per_second, 2.0);
         assert_float_absolute_eq!(metrics.peak_notes_per_second, 2.0);
+    }
+
+    #[test]
+    fn test_analyze_note_density_with_tempo_change() {
+        // Arrange
+        let score = create_musicxml_dom_with_tempo_change();
+
+        // Act
+        let metrics = analyze_note_density(&score);
+
+        // Assert
+        // Measure 1: 120 BPM, 1 quarter note = 1 note in 2 seconds = 0.5 notes/sec
+        // Measure 2: 60 BPM, 2 quarter notes = 2 notes in 4 seconds = 0.5 notes/sec
+        // Average: 3 notes in 6 seconds = 0.5 notes/sec
+        // Peak: 0.5 notes/sec (same for both measures)
+        assert_float_absolute_eq!(metrics.average_notes_per_second, 0.5);
+        assert_float_absolute_eq!(metrics.peak_notes_per_second, 0.5);
     }
 
     fn create_empty_musicxml_dom() -> ScorePartwise {
@@ -472,6 +491,57 @@ mod tests {
         <duration>1</duration>
         <type>quarter</type>
       </note>
+      <note>
+        <pitch><step>D</step><octave>4</octave></pitch>
+        <duration>1</duration>
+        <type>quarter</type>
+      </note>
+      <note>
+        <pitch><step>E</step><octave>4</octave></pitch>
+        <duration>1</duration>
+        <type>quarter</type>
+      </note>
+    </measure>
+  </part>
+</score-partwise>"#;
+
+        parse_musicxml_to_dom(xml)
+    }
+
+    fn create_musicxml_dom_with_tempo_change() -> ScorePartwise {
+        let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
+<score-partwise version="4.0">
+  <part-list>
+    <score-part id="P1">
+      <part-name>Test</part-name>
+    </score-part>
+  </part-list>
+  <part id="P1">
+    <measure number="1">
+      <direction placement="above">
+        <direction-type>
+          <metronome>
+            <beat-unit>quarter</beat-unit>
+            <per-minute>120</per-minute>
+          </metronome>
+        </direction-type>
+      </direction>
+      <note>
+        <pitch><step>C</step><octave>4</octave></pitch>
+        <duration>1</duration>
+        <type>quarter</type>
+      </note>
+    </measure>
+    <measure number="2">
+      <direction placement="above">
+        <direction-type>
+          <metronome>
+            <beat-unit>quarter</beat-unit>
+            <per-minute>60</per-minute>
+          </metronome>
+        </direction-type>
+      </direction>
       <note>
         <pitch><step>D</step><octave>4</octave></pitch>
         <duration>1</duration>
