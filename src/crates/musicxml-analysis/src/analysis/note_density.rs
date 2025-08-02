@@ -9,16 +9,13 @@ pub struct DensityMetrics {
     pub peak_notes_per_second: f64,
 }
 
-pub fn calculate_note_density(total_notes: u32, duration_seconds: f64) -> f64 {
-    total_notes as f64 / duration_seconds
-}
-
 pub fn analyze_note_density(score: &ScorePartwise) -> DensityMetrics {
-    const DEFAULT_BEATS_PER_MEASURE: f64 = 4.0; // 4/4 time
+    let (beats, _beat_type) = extract_time_signature_from_score(score);
+    let beats_per_measure = beats as f64;
 
     let bpm = extract_bpm_from_score(score);
     let seconds_per_beat = 60.0 / bpm;
-    let seconds_per_measure = seconds_per_beat * DEFAULT_BEATS_PER_MEASURE;
+    let seconds_per_measure = seconds_per_beat * beats_per_measure;
 
     let mut total_notes = 0;
     let mut total_measures = 0;
@@ -111,6 +108,51 @@ fn extract_bpm_from_beat_based(beat_based: &musicxml::elements::BeatBased) -> Op
     }
 }
 
+fn extract_time_signature_from_score(score: &ScorePartwise) -> (u32, u32) {
+    const DEFAULT_TIME_SIG: (u32, u32) = (4, 4); // 4/4 time
+
+    if let Some(first_part) = score.content.part.first() {
+        for part_element in &first_part.content {
+            if let PartElement::Measure(measure) = part_element {
+                if let Some(time_sig) = extract_time_signature_from_measure(measure) {
+                    return time_sig;
+                }
+            }
+        }
+    }
+
+    DEFAULT_TIME_SIG
+}
+
+fn extract_time_signature_from_measure(measure: &Measure) -> Option<(u32, u32)> {
+    for measure_content in &measure.content {
+        if let MeasureElement::Attributes(attributes) = measure_content {
+            if let Some(first_time) = attributes.content.time.first() {
+                let beats = first_time
+                    .content
+                    .beats
+                    .first()
+                    .unwrap()
+                    .beats
+                    .content
+                    .parse()
+                    .ok()?;
+                let beat_type = first_time
+                    .content
+                    .beats
+                    .first()
+                    .unwrap()
+                    .beat_type
+                    .content
+                    .parse()
+                    .ok()?;
+                return Some((beats, beat_type));
+            }
+        }
+    }
+    None
+}
+
 fn get_nr_notes_in_measure(measure: &musicxml::elements::Measure) -> i32 {
     let mut nr_notes = 0;
     for measure_content in &measure.content {
@@ -126,20 +168,6 @@ mod tests {
     use assert_float_eq::assert_float_absolute_eq;
 
     use super::*;
-
-    #[test]
-    fn test_note_density_calculation() {
-        // Arrange
-        let total_notes = 4;
-        let duration_seconds = 8.0;
-
-        // Act
-        let actual = calculate_note_density(total_notes, duration_seconds);
-
-        // Assert
-        let expected = 0.5;
-        assert_float_absolute_eq!(actual, expected);
-    }
 
     #[test]
     fn test_analyze_note_density_empty_score_returns_zero() {
@@ -208,6 +236,22 @@ mod tests {
         let seconds_per_measure = 60.0 / measures_per_minute;
         assert_float_absolute_eq!(metrics.average_notes_per_second, 2.0 / seconds_per_measure);
         assert_float_absolute_eq!(metrics.peak_notes_per_second, 0.5);
+    }
+
+    #[test]
+    fn test_analyze_note_density_with_3_4_time_signature() {
+        // Arrange
+        let score = create_musicxml_dom_with_3_4_time_signature();
+
+        // Act
+        let metrics = analyze_note_density(&score);
+
+        // Assert
+        // With 3/4 time at 120 BPM:
+        // - 3 beats per measure = 1.5 seconds per measure
+        // - 3 quarter notes in one measure = 3 notes / 1.5 seconds = 2.0 notes per second
+        assert_float_absolute_eq!(metrics.average_notes_per_second, 2.0);
+        assert_float_absolute_eq!(metrics.peak_notes_per_second, 2.0);
     }
 
     fn create_empty_musicxml_dom() -> ScorePartwise {
@@ -401,6 +445,45 @@ mod tests {
      </note>
    </measure>
  </part>
+</score-partwise>"#;
+
+        parse_musicxml_to_dom(xml)
+    }
+
+    fn create_musicxml_dom_with_3_4_time_signature() -> ScorePartwise {
+        let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
+<score-partwise version="4.0">
+  <part-list>
+    <score-part id="P1">
+      <part-name>Test</part-name>
+    </score-part>
+  </part-list>
+  <part id="P1">
+    <measure number="1">
+      <attributes>
+        <time>
+          <beats>3</beats>
+          <beat-type>4</beat-type>
+        </time>
+      </attributes>
+      <note>
+        <pitch><step>C</step><octave>4</octave></pitch>
+        <duration>1</duration>
+        <type>quarter</type>
+      </note>
+      <note>
+        <pitch><step>D</step><octave>4</octave></pitch>
+        <duration>1</duration>
+        <type>quarter</type>
+      </note>
+      <note>
+        <pitch><step>E</step><octave>4</octave></pitch>
+        <duration>1</duration>
+        <type>quarter</type>
+      </note>
+    </measure>
+  </part>
 </score-partwise>"#;
 
         parse_musicxml_to_dom(xml)
