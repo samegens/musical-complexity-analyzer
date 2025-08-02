@@ -3,6 +3,8 @@ use musicxml::{
     elements::{Measure, MeasureElement, MetronomeContents, PartElement, ScorePartwise},
 };
 
+use super::TimeSignature;
+
 #[derive(Debug, PartialEq)]
 pub struct DensityMetrics {
     pub average_notes_per_second: f64,
@@ -28,7 +30,7 @@ pub fn analyze_note_density(score: &ScorePartwise) -> DensityMetrics {
                     current_time_sig = new_time_sig;
                 }
 
-                let beats_per_measure = current_time_sig.0 as f64;
+                let beats_per_measure = current_time_sig.beats_per_measure() as f64;
                 let seconds_per_beat = 60.0 / current_bpm;
                 let seconds_per_measure = seconds_per_beat * beats_per_measure;
 
@@ -114,9 +116,7 @@ fn extract_bpm_from_beat_based(beat_based: &musicxml::elements::BeatBased) -> Op
     }
 }
 
-fn extract_time_signature_from_score(score: &ScorePartwise) -> (u32, u32) {
-    const DEFAULT_TIME_SIG: (u32, u32) = (4, 4); // 4/4 time
-
+fn extract_time_signature_from_score(score: &ScorePartwise) -> TimeSignature {
     if let Some(first_part) = score.content.part.first() {
         for part_element in &first_part.content {
             if let PartElement::Measure(measure) = part_element {
@@ -127,14 +127,17 @@ fn extract_time_signature_from_score(score: &ScorePartwise) -> (u32, u32) {
         }
     }
 
-    DEFAULT_TIME_SIG
+    TimeSignature {
+        numerator: 4,
+        denominator: 4,
+    }
 }
 
-fn extract_time_signature_from_measure(measure: &Measure) -> Option<(u32, u32)> {
+fn extract_time_signature_from_measure(measure: &Measure) -> Option<TimeSignature> {
     for measure_content in &measure.content {
         if let MeasureElement::Attributes(attributes) = measure_content {
             if let Some(first_time) = attributes.content.time.first() {
-                let beats = first_time
+                let numerator = first_time
                     .content
                     .beats
                     .first()
@@ -143,7 +146,7 @@ fn extract_time_signature_from_measure(measure: &Measure) -> Option<(u32, u32)> 
                     .content
                     .parse()
                     .ok()?;
-                let beat_type = first_time
+                let denominator = first_time
                     .content
                     .beats
                     .first()
@@ -152,10 +155,14 @@ fn extract_time_signature_from_measure(measure: &Measure) -> Option<(u32, u32)> 
                     .content
                     .parse()
                     .ok()?;
-                return Some((beats, beat_type));
+                return Some(TimeSignature {
+                    numerator,
+                    denominator,
+                });
             }
         }
     }
+
     None
 }
 
