@@ -77,50 +77,8 @@ fn calculate_density_metrics(measure_data: &[MeasureData]) -> DensityMetrics {
 }
 
 pub fn analyze_note_density(score: &ScorePartwise) -> DensityMetrics {
-    let mut current_bpm = extract_bpm_from_score(score);
-    let mut current_time_sig = extract_time_signature_from_score(score);
-
-    let mut total_notes = 0;
-    let mut total_duration_seconds = 0.0;
-    let mut peak_notes_per_second = 0.0;
-
-    for part in &score.content.part {
-        for part_element in &part.content {
-            if let PartElement::Measure(measure) = part_element {
-                if let Some(new_bpm) = extract_bpm_from_measure(measure) {
-                    current_bpm = new_bpm;
-                }
-
-                if let Some(new_time_sig) = extract_time_signature_from_measure(measure) {
-                    current_time_sig = new_time_sig;
-                }
-
-                let beats_per_measure = current_time_sig.beats_per_measure() as f64;
-                let seconds_per_beat = 60.0 / current_bpm;
-                let seconds_per_measure = seconds_per_beat * beats_per_measure;
-
-                let notes_in_measure = get_nr_notes_in_measure(measure);
-                total_notes += notes_in_measure;
-                total_duration_seconds += seconds_per_measure;
-
-                let measure_density = notes_in_measure as f64 / seconds_per_measure;
-                if measure_density > peak_notes_per_second {
-                    peak_notes_per_second = measure_density;
-                }
-            }
-        }
-    }
-
-    let average_notes_per_second = if total_duration_seconds > 0.0 {
-        total_notes as f64 / total_duration_seconds
-    } else {
-        0.0
-    };
-
-    DensityMetrics {
-        average_notes_per_second,
-        peak_notes_per_second,
-    }
+    let measure_data = extract_measure_data(score);
+    calculate_density_metrics(&measure_data)
 }
 
 fn extract_bpm_from_score(score: &ScorePartwise) -> f64 {
