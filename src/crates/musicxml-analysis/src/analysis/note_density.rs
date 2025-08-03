@@ -12,6 +12,36 @@ pub struct DensityMetrics {
     pub peak_notes_per_second: f64,
 }
 
+fn extract_measure_data(score: &ScorePartwise) -> Vec<MeasureData> {
+    let mut measure_data = Vec::new();
+    let mut current_bpm = extract_bpm_from_score(score);
+    let mut current_time_sig = extract_time_signature_from_score(score);
+
+    for part in &score.content.part {
+        for part_element in &part.content {
+            if let PartElement::Measure(measure) = part_element {
+                if let Some(new_bpm) = extract_bpm_from_measure(measure) {
+                    current_bpm = new_bpm;
+                }
+
+                if let Some(new_time_sig) = extract_time_signature_from_measure(measure) {
+                    current_time_sig = new_time_sig;
+                }
+
+                let note_count = get_nr_notes_in_measure(measure);
+
+                measure_data.push(MeasureData {
+                    note_count,
+                    tempo_bpm: current_bpm,
+                    time_signature: current_time_sig,
+                });
+            }
+        }
+    }
+
+    measure_data
+}
+
 fn calculate_density_metrics(measure_data: &[MeasureData]) -> DensityMetrics {
     if measure_data.is_empty() {
         return DensityMetrics {
@@ -201,7 +231,7 @@ fn extract_time_signature_from_measure(measure: &Measure) -> Option<TimeSignatur
     None
 }
 
-fn get_nr_notes_in_measure(measure: &musicxml::elements::Measure) -> i32 {
+fn get_nr_notes_in_measure(measure: &musicxml::elements::Measure) -> u32 {
     let mut nr_notes = 0;
     for measure_content in &measure.content {
         if let MeasureElement::Note(_) = measure_content {
@@ -441,6 +471,70 @@ mod tests {
         // Peak: 0.667 notes/sec (second measure)
         assert_float_absolute_eq!(metrics.average_notes_per_second, 2.0 / 3.5);
         assert_float_absolute_eq!(metrics.peak_notes_per_second, 1.0 / 1.5);
+    }
+
+    #[test]
+    fn test_extract_measure_data_single_measure() {
+        // Arrange
+        let score = create_musicxml_dom_with_two_quarter_notes();
+
+        // Act
+        let measure_data = extract_measure_data(&score);
+
+        // Assert
+        assert_eq!(measure_data.len(), 1);
+        assert_eq!(measure_data[0].note_count, 2);
+        assert_eq!(measure_data[0].tempo_bpm, 120.0); // Default
+        assert_eq!(measure_data[0].time_signature, TimeSignature::new(4, 4)); // Default
+    }
+
+    #[test]
+    fn test_extract_measure_data_single_measure_defaults() {
+        // Arrange
+        let score = create_musicxml_dom_with_two_quarter_notes();
+
+        // Act
+        let result = extract_measure_data(&score);
+
+        // Assert
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].note_count, 2);
+        assert_eq!(result[0].tempo_bpm, 120.0);
+        assert_eq!(result[0].time_signature, TimeSignature::new(4, 4));
+    }
+
+    #[test]
+    fn test_extract_measure_data_tempo_change() {
+        // Arrange
+        let score = create_musicxml_dom_with_tempo_change();
+
+        // Act
+        let result = extract_measure_data(&score);
+
+        // Assert
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0].tempo_bpm, 120.0);
+        assert_eq!(result[1].tempo_bpm, 60.0);
+        // Note counts should match expected values
+        assert_eq!(result[0].note_count, 1);
+        assert_eq!(result[1].note_count, 2);
+    }
+
+    #[test]
+    fn test_extract_measure_data_time_signature_change() {
+        // Arrange
+        let score = create_musicxml_dom_with_time_signature_change();
+
+        // Act
+        let result = extract_measure_data(&score);
+
+        // Assert
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0].time_signature, TimeSignature::new(4, 4));
+        assert_eq!(result[1].time_signature, TimeSignature::new(3, 4));
+        // Note counts should match expected values
+        assert_eq!(result[0].note_count, 1);
+        assert_eq!(result[1].note_count, 1);
     }
 
     fn create_empty_musicxml_dom() -> ScorePartwise {
