@@ -1,5 +1,6 @@
 use super::TimeSignature;
 
+#[derive(Debug, PartialEq)]
 pub struct MeasureData {
     pub note_count: u32,
     pub tempo_bpm: f64,

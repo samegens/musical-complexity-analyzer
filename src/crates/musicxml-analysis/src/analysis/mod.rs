@@ -1,6 +1,5 @@
-pub mod measure_data;
 pub mod note_density;
-pub mod time_signature;
+pub use note_density::calculate_density_metrics;
 
-pub use measure_data::MeasureData;
-pub use time_signature::TimeSignature;
+pub mod density_metrics;
+pub use density_metrics::DensityMetrics;
