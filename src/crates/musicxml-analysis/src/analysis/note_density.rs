@@ -23,11 +23,7 @@ pub fn calculate_density_metrics(measure_data: &[MeasureData]) -> DensityMetrics
         }
     }
 
-    let average_notes_per_second = if total_duration_seconds > 0.0 {
-        total_notes as f64 / total_duration_seconds
-    } else {
-        0.0
-    };
+    let average_notes_per_second = total_notes as f64 / total_duration_seconds;
 
     DensityMetrics {
         average_notes_per_second,
