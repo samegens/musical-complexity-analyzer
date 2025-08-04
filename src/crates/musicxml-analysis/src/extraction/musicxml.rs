@@ -1,6 +1,9 @@
 use musicxml::{
     datatypes::NoteTypeValue,
-    elements::{Measure, MeasureElement, MetronomeContents, PartElement, ScorePartwise},
+    elements::{
+        AudibleType, Measure, MeasureElement, MetronomeContents, NoteContents, NoteType,
+        PartElement, ScorePartwise,
+    },
 };
 
 use crate::model::{MeasureData, TimeSignature};
@@ -146,8 +149,12 @@ fn extract_time_signature_from_measure(measure: &Measure) -> Option<TimeSignatur
 fn get_nr_notes_in_measure(measure: &musicxml::elements::Measure) -> u32 {
     let mut nr_notes = 0;
     for measure_content in &measure.content {
-        if let MeasureElement::Note(_) = measure_content {
-            nr_notes += 1;
+        if let MeasureElement::Note(note) = measure_content {
+            if let NoteType::Normal(normal_info) = &note.content.info {
+                if let AudibleType::Pitch(_) = &normal_info.audible {
+                    nr_notes += 1;
+                }
+            }
         }
     }
     nr_notes
@@ -270,6 +277,23 @@ mod tests {
         assert_eq!(result.len(), 2);
         assert_eq!(result[0].time_signature, TimeSignature::new(4, 4));
         assert_eq!(result[1].time_signature, TimeSignature::new(3, 4));
+    }
+
+    #[test]
+    fn test_extract_measure_data_excludes_rests() {
+        // Arrange
+        let score = create_musicxml_dom_with_rest_only();
+
+        // Act
+        let actual = extract_measure_data(&score);
+
+        // Assert
+        let expected = vec![MeasureData {
+            note_count: 0,
+            tempo_bpm: 120.0,
+            time_signature: TimeSignature::new(4, 4),
+        }];
+        assert_eq!(actual, expected);
     }
 
     fn create_empty_musicxml_dom() -> ScorePartwise {
@@ -480,6 +504,29 @@ mod tests {
           <beat-type>4</beat-type>
         </time>
       </attributes>
+    </measure>
+  </part>
+</score-partwise>"#;
+
+        parse_musicxml_to_dom(xml)
+    }
+
+    fn create_musicxml_dom_with_rest_only() -> ScorePartwise {
+        let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
+<score-partwise version="4.0">
+  <part-list>
+    <score-part id="P1">
+      <part-name>Test</part-name>
+    </score-part>
+  </part-list>
+  <part id="P1">
+    <measure number="1">
+      <note>
+        <rest/>
+        <duration>1</duration>
+        <type>quarter</type>
+      </note>
     </measure>
   </part>
 </score-partwise>"#;
