@@ -6,20 +6,23 @@ pub fn calculate_density_metrics(measure_data: &[MeasureData]) -> DensityMetrics
         return DensityMetrics {
             average_notes_per_second: 0.0,
             peak_notes_per_second: 0.0,
+            peak_measure: 0,
         };
     }
 
     let mut total_notes = 0;
     let mut total_duration_seconds = 0.0;
     let mut peak_notes_per_second = 0.0;
+    let mut peak_measure: u32 = 0;
 
-    for data in measure_data {
+    for (measure_index, data) in measure_data.iter().enumerate() {
         total_notes += data.note_count;
         total_duration_seconds += data.get_measure_duration_seconds();
 
         let notes_per_second = data.note_count as f64 / data.get_measure_duration_seconds();
         if notes_per_second > peak_notes_per_second {
             peak_notes_per_second = notes_per_second;
+            peak_measure = (measure_index + 1) as u32;
         }
     }
 
@@ -28,6 +31,7 @@ pub fn calculate_density_metrics(measure_data: &[MeasureData]) -> DensityMetrics
     DensityMetrics {
         average_notes_per_second,
         peak_notes_per_second,
+        peak_measure,
     }
 }
 
@@ -65,8 +69,9 @@ mod tests {
         let metrics = calculate_density_metrics(&measure_data);
 
         // Assert
-        assert_float_absolute_eq!(metrics.average_notes_per_second, 0.0, 0.001);
-        assert_float_absolute_eq!(metrics.peak_notes_per_second, 0.0, 0.001);
+        assert_float_absolute_eq!(metrics.average_notes_per_second, 0.0);
+        assert_float_absolute_eq!(metrics.peak_notes_per_second, 0.0);
+        assert_eq!(metrics.peak_measure, 0);
     }
 
     #[test]
@@ -86,6 +91,7 @@ mod tests {
         // 2 notes in 2 seconds = 1.0 notes/sec
         assert_float_absolute_eq!(metrics.average_notes_per_second, 1.0);
         assert_float_absolute_eq!(metrics.peak_notes_per_second, 1.0);
+        assert_eq!(metrics.peak_measure, 1);
     }
 
     #[test]
@@ -114,6 +120,7 @@ mod tests {
         // Peak: 0.5 notes/sec (same for both measures)
         assert_float_absolute_eq!(metrics.average_notes_per_second, 0.5);
         assert_float_absolute_eq!(metrics.peak_notes_per_second, 0.5);
+        assert_eq!(metrics.peak_measure, 1);
     }
 
     #[test]
@@ -142,5 +149,6 @@ mod tests {
         // Peak: 0.667 notes/sec (second measure)
         assert_float_absolute_eq!(metrics.average_notes_per_second, 2.0 / 3.5);
         assert_float_absolute_eq!(metrics.peak_notes_per_second, 1.0 / 1.5);
+        assert_eq!(metrics.peak_measure, 2);
     }
 }

@@ -24,8 +24,8 @@ fn main() {
                 metrics.average_notes_per_second
             );
             println!(
-                "Peak   : {:>5.2} notes/second",
-                metrics.peak_notes_per_second
+                "Peak   : {:>5.2} notes/second @ measure {}",
+                metrics.peak_notes_per_second, metrics.peak_measure
             );
         }
         Err(e) => {
@@ -37,5 +37,6 @@ fn main() {
 
 pub fn analyze_note_density(score: &ScorePartwise) -> DensityMetrics {
     let measure_data = extract_measure_data(score);
+    print!("{measure_data:?}");
     calculate_density_metrics(&measure_data)
 }
