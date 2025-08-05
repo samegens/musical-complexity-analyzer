@@ -104,7 +104,11 @@ fn extract_bpm_from_beat_based(beat_based: &musicxml::elements::BeatBased) -> Op
         }
     };
 
-    Some(quarter_note_bpm)
+    if beat_based.beat_unit_dot.is_empty() {
+        Some(quarter_note_bpm)
+    } else {
+        Some(quarter_note_bpm * 1.5)
+    }
 }
 
 fn extract_time_signature_from_score(score: &ScorePartwise) -> TimeSignature {
@@ -339,6 +343,56 @@ mod tests {
         <direction-type>
           <metronome>
             <beat-unit>half</beat-unit>
+            <per-minute>60</per-minute>
+          </metronome>
+        </direction-type>
+      </direction>
+    </measure>
+  </part>
+</score-partwise>"#;
+
+        parse_musicxml_to_dom(xml)
+    }
+
+    #[test]
+    fn test_extract_measure_data_with_dotted_half_note_metronome() {
+        // Arrange
+        let score = create_musicxml_dom_with_dotted_half_note_metronome();
+
+        // Act
+        let actual = extract_measure_data(&score);
+
+        // Assert
+        let expected = vec![MeasureData {
+            note_count: 0,
+            tempo_bpm: 60.0 * 3.0,
+            time_signature: TimeSignature::new(3, 4),
+        }];
+        assert_eq!(actual, expected);
+    }
+
+    fn create_musicxml_dom_with_dotted_half_note_metronome() -> ScorePartwise {
+        let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
+<score-partwise version="4.0">
+  <part-list>
+    <score-part id="P1">
+      <part-name>Test</part-name>
+    </score-part>
+  </part-list>
+  <part id="P1">
+    <measure number="1">
+      <attributes>
+        <time>
+          <beats>3</beats>
+          <beat-type>4</beat-type>
+        </time>
+      </attributes>
+      <direction placement="above">
+        <direction-type>
+          <metronome>
+            <beat-unit>half</beat-unit>
+            <beat-unit-dot/>
             <per-minute>60</per-minute>
           </metronome>
         </direction-type>
