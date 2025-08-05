@@ -191,6 +191,10 @@ mod tests {
         assert!(actual_measure_data.is_empty());
     }
 
+    fn create_empty_musicxml_dom() -> ScorePartwise {
+        create_test_score("")
+    }
+
     #[test]
     fn test_extract_measure_data_single_measure() {
         // Arrange
@@ -206,6 +210,18 @@ mod tests {
             time_signature: TimeSignature::new(4, 4), // Default
         }];
         assert_eq!(actual, expected);
+    }
+
+    fn create_musicxml_dom_with_two_quarter_notes() -> ScorePartwise {
+        let measures = format!(
+            r#"<measure number="1">
+    {}
+    {}
+</measure>"#,
+            create_note("C", 4),
+            create_note("D", 4)
+        );
+        create_test_score(&measures)
     }
 
     #[test]
@@ -232,6 +248,22 @@ mod tests {
         assert_eq!(actual, expected);
     }
 
+    fn create_musicxml_dom_with_two_measures() -> ScorePartwise {
+        let measures = format!(
+            r#"<measure number="1">
+    {note_c}
+</measure>
+<measure number="2">
+    {note_d}
+    {note_e}
+</measure>"#,
+            note_c = create_note("C", 4),
+            note_d = create_note("D", 4),
+            note_e = create_note("E", 4)
+        );
+        create_test_score(&measures)
+    }
+
     #[test]
     fn test_extract_measure_data_with_metronome_direction() {
         // Arrange
@@ -247,6 +279,16 @@ mod tests {
             time_signature: TimeSignature::new(4, 4),
         }];
         assert_eq!(actual, expected);
+    }
+
+    fn create_musicxml_dom_with_60bpm_in_notation() -> ScorePartwise {
+        let measures = format!(
+            r#"<measure number="1">
+    {metronome}
+</measure>"#,
+            metronome = create_metronome("quarter", 60)
+        );
+        create_test_score(&measures)
     }
 
     #[test]
@@ -266,6 +308,28 @@ mod tests {
         assert_eq!(actual, expected);
     }
 
+    fn create_score_with_60bpm_in_sound_tempo_and_120bpm_in_metronome() -> ScorePartwise {
+        let direction = format!(
+            r#"<direction>
+    <sound tempo="60"/>
+    <direction-type>
+        <metronome>
+            <beat-unit>quarter</beat-unit>
+            <per-minute>120</per-minute>
+        </metronome>
+    </direction-type>
+</direction>"#
+        );
+
+        let measures = format!(
+            r#"<measure number="1">
+    {direction}
+</measure>"#
+        );
+
+        create_test_score(&measures)
+    }
+
     #[test]
     fn test_extract_measure_data_tempo_change() {
         // Arrange
@@ -280,6 +344,20 @@ mod tests {
         assert_eq!(result[1].tempo_bpm, 60.0);
     }
 
+    fn create_musicxml_dom_with_tempo_change() -> ScorePartwise {
+        let measures = format!(
+            r#"<measure number="1">
+    {metronome_120}
+</measure>
+<measure number="2">
+    {metronome_60}
+</measure>"#,
+            metronome_120 = create_metronome("quarter", 120),
+            metronome_60 = create_metronome("quarter", 60)
+        );
+        create_test_score(&measures)
+    }
+
     #[test]
     fn test_extract_measure_data_time_signature_change() {
         // Arrange
@@ -292,6 +370,20 @@ mod tests {
         assert_eq!(result.len(), 2);
         assert_eq!(result[0].time_signature, TimeSignature::new(4, 4));
         assert_eq!(result[1].time_signature, TimeSignature::new(3, 4));
+    }
+
+    fn create_musicxml_dom_with_time_signature_change() -> ScorePartwise {
+        let measures = format!(
+            r#"<measure number="1">
+    {time_sig_4_4}
+</measure>
+<measure number="2">
+    {time_sig_3_4}
+</measure>"#,
+            time_sig_4_4 = create_time_signature(4, 4),
+            time_sig_3_4 = create_time_signature(3, 4)
+        );
+        create_test_score(&measures)
     }
 
     #[test]
@@ -309,6 +401,16 @@ mod tests {
             time_signature: TimeSignature::new(4, 4),
         }];
         assert_eq!(actual, expected);
+    }
+
+    fn create_musicxml_dom_with_rest_only() -> ScorePartwise {
+        let measures = format!(
+            r#"<measure number="1">
+    {}
+</measure>"#,
+            create_rest()
+        );
+        create_test_score(&measures)
     }
 
     #[test]
@@ -329,29 +431,13 @@ mod tests {
     }
 
     fn create_musicxml_dom_with_half_note_metronome() -> ScorePartwise {
-        let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
-<score-partwise version="4.0">
-  <part-list>
-    <score-part id="P1">
-      <part-name>Test</part-name>
-    </score-part>
-  </part-list>
-  <part id="P1">
-    <measure number="1">
-      <direction placement="above">
-        <direction-type>
-          <metronome>
-            <beat-unit>half</beat-unit>
-            <per-minute>60</per-minute>
-          </metronome>
-        </direction-type>
-      </direction>
-    </measure>
-  </part>
-</score-partwise>"#;
-
-        parse_musicxml_to_dom(xml)
+        let measures = format!(
+            r#"<measure number="1">
+    {}
+</measure>"#,
+            create_metronome("half", 60)
+        );
+        create_test_score(&measures)
     }
 
     #[test]
@@ -372,40 +458,20 @@ mod tests {
     }
 
     fn create_musicxml_dom_with_dotted_half_note_metronome() -> ScorePartwise {
-        let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
-<score-partwise version="4.0">
-  <part-list>
-    <score-part id="P1">
-      <part-name>Test</part-name>
-    </score-part>
-  </part-list>
-  <part id="P1">
-    <measure number="1">
-      <attributes>
-        <time>
-          <beats>3</beats>
-          <beat-type>4</beat-type>
-        </time>
-      </attributes>
-      <direction placement="above">
-        <direction-type>
-          <metronome>
-            <beat-unit>half</beat-unit>
-            <beat-unit-dot/>
-            <per-minute>60</per-minute>
-          </metronome>
-        </direction-type>
-      </direction>
-    </measure>
-  </part>
-</score-partwise>"#;
-
-        parse_musicxml_to_dom(xml)
+        let measures = format!(
+            r#"<measure number="1">
+    {time_sig}
+    {metronome}
+</measure>"#,
+            time_sig = create_time_signature(3, 4),
+            metronome = create_dotted_metronome("half", 60)
+        );
+        create_test_score(&measures)
     }
 
-    fn create_empty_musicxml_dom() -> ScorePartwise {
-        let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+    fn create_test_score(measures: &str) -> ScorePartwise {
+        let xml = format!(
+            r#"<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
 <score-partwise version="4.0">
   <part-list>
@@ -414,232 +480,71 @@ mod tests {
     </score-part>
   </part-list>
   <part id="P1">
+    {measures}
   </part>
-</score-partwise>"#;
-
-        parse_musicxml_to_dom(xml)
+</score-partwise>"#
+        );
+        parse_musicxml_to_dom(&xml)
     }
 
-    fn create_musicxml_dom_with_two_quarter_notes() -> ScorePartwise {
-        let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
-<score-partwise version="4.0">
-  <part-list>
-    <score-part id="P1">
-      <part-name>Test</part-name>
-    </score-part>
-  </part-list>
-  <part id="P1">
-    <measure number="1">
-      <note>
+    fn create_note(step: &str, octave: u8) -> String {
+        format!(
+            r#"<note>
         <pitch>
-          <step>C</step>
-          <octave>4</octave>
+          <step>{step}</step>
+          <octave>{octave}</octave>
         </pitch>
         <duration>1</duration>
         <type>quarter</type>
-      </note>
-      <note>
-        <pitch>
-          <step>D</step>
-          <octave>4</octave>
-        </pitch>
-        <duration>1</duration>
-        <type>quarter</type>
-      </note>
-    </measure>
-  </part>
-</score-partwise>"#;
-
-        parse_musicxml_to_dom(xml)
+      </note>"#
+        )
     }
 
-    fn create_musicxml_dom_with_60bpm_in_notation() -> ScorePartwise {
-        let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
-<score-partwise version="4.0">
-  <part-list>
-    <score-part id="P1">
-      <part-name>Test</part-name>
-    </score-part>
-  </part-list>
-  <part id="P1">
-    <measure number="1">
-      <direction placement="above">
-        <direction-type>
-          <metronome>
-            <beat-unit>quarter</beat-unit>
-            <per-minute>60</per-minute>
-          </metronome>
-        </direction-type>
-      </direction>
-    </measure>
-  </part>
-</score-partwise>"#;
-
-        parse_musicxml_to_dom(xml)
-    }
-
-    fn create_score_with_60bpm_in_sound_tempo_and_120bpm_in_metronome() -> ScorePartwise {
-        let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
-<score-partwise version="4.0">
-  <part-list>
-    <score-part id="P1">
-      <part-name>Test</part-name>
-    </score-part>
-  </part-list>
-  <part id="P1">
-    <measure number="1">
-      <direction>
-        <sound tempo="60"/>
-        <direction-type>
-          <metronome>
-            <beat-unit>quarter</beat-unit>
-            <per-minute>120</per-minute>
-          </metronome>
-        </direction-type>
-      </direction>
-    </measure>
-  </part>
-</score-partwise>"#;
-
-        parse_musicxml_to_dom(xml)
-    }
-
-    fn create_musicxml_dom_with_two_measures() -> ScorePartwise {
-        let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
-<score-partwise version="4.0">
- <part-list>
-   <score-part id="P1">
-     <part-name>Test</part-name>
-   </score-part>
- </part-list>
- <part id="P1">
-   <measure number="1">
-     <note>
-       <pitch>
-         <step>C</step>
-         <octave>4</octave>
-       </pitch>
-       <duration>1</duration>
-       <type>quarter</type>
-     </note>
-   </measure>
-   <measure number="2">
-     <note>
-       <pitch>
-         <step>D</step>
-         <octave>4</octave>
-       </pitch>
-       <duration>1</duration>
-       <type>quarter</type>
-     </note>
-     <note>
-       <pitch>
-         <step>E</step>
-         <octave>4</octave>
-       </pitch>
-       <duration>1</duration>
-       <type>quarter</type>
-     </note>
-   </measure>
- </part>
-</score-partwise>"#;
-
-        parse_musicxml_to_dom(xml)
-    }
-
-    fn create_musicxml_dom_with_tempo_change() -> ScorePartwise {
-        let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
-<score-partwise version="4.0">
-  <part-list>
-    <score-part id="P1">
-      <part-name>Test</part-name>
-    </score-part>
-  </part-list>
-  <part id="P1">
-    <measure number="1">
-      <direction placement="above">
-        <direction-type>
-          <metronome>
-            <beat-unit>quarter</beat-unit>
-            <per-minute>120</per-minute>
-          </metronome>
-        </direction-type>
-      </direction>
-    </measure>
-    <measure number="2">
-      <direction placement="above">
-        <direction-type>
-          <metronome>
-            <beat-unit>quarter</beat-unit>
-            <per-minute>60</per-minute>
-          </metronome>
-        </direction-type>
-      </direction>
-    </measure>
-  </part>
-</score-partwise>"#;
-
-        parse_musicxml_to_dom(xml)
-    }
-
-    fn create_musicxml_dom_with_time_signature_change() -> ScorePartwise {
-        let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
-<score-partwise version="4.0">
-  <part-list>
-    <score-part id="P1">
-      <part-name>Test</part-name>
-    </score-part>
-  </part-list>
-  <part id="P1">
-    <measure number="1">
-      <attributes>
-        <time>
-          <beats>4</beats>
-          <beat-type>4</beat-type>
-        </time>
-      </attributes>
-    </measure>
-    <measure number="2">
-      <attributes>
-        <time>
-          <beats>3</beats>
-          <beat-type>4</beat-type>
-        </time>
-      </attributes>
-    </measure>
-  </part>
-</score-partwise>"#;
-
-        parse_musicxml_to_dom(xml)
-    }
-
-    fn create_musicxml_dom_with_rest_only() -> ScorePartwise {
-        let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
-<score-partwise version="4.0">
-  <part-list>
-    <score-part id="P1">
-      <part-name>Test</part-name>
-    </score-part>
-  </part-list>
-  <part id="P1">
-    <measure number="1">
-      <note>
+    fn create_rest() -> String {
+        r#"<note>
         <rest/>
         <duration>1</duration>
         <type>quarter</type>
-      </note>
-    </measure>
-  </part>
-</score-partwise>"#;
+      </note>"#
+            .to_string()
+    }
 
-        parse_musicxml_to_dom(xml)
+    fn create_metronome(beat_unit: &str, per_minute: u32) -> String {
+        format!(
+            r#"<direction placement="above">
+        <direction-type>
+          <metronome>
+            <beat-unit>{beat_unit}</beat-unit>
+            <per-minute>{per_minute}</per-minute>
+          </metronome>
+        </direction-type>
+      </direction>"#
+        )
+    }
+
+    fn create_time_signature(beats: u32, beat_type: u32) -> String {
+        format!(
+            r#"<attributes>
+        <time>
+          <beats>{beats}</beats>
+          <beat-type>{beat_type}</beat-type>
+        </time>
+      </attributes>"#
+        )
+    }
+
+    fn create_dotted_metronome(beat_unit: &str, per_minute: u32) -> String {
+        format!(
+            r#"<direction placement="above">
+    <direction-type>
+        <metronome>
+            <beat-unit>{beat_unit}</beat-unit>
+            <beat-unit-dot/>
+            <per-minute>{per_minute}</per-minute>
+        </metronome>
+    </direction-type>
+</direction>"#
+        )
     }
 
     fn parse_musicxml_to_dom(xml: &str) -> ScorePartwise {
