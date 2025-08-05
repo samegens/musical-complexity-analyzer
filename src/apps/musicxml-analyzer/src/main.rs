@@ -37,6 +37,5 @@ fn main() {
 
 pub fn analyze_note_density(score: &ScorePartwise) -> DensityMetrics {
     let measure_data = extract_measure_data(score);
-    print!("{measure_data:?}");
     calculate_density_metrics(&measure_data)
 }
