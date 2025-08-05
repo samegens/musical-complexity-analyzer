@@ -309,8 +309,7 @@ mod tests {
     }
 
     fn create_score_with_60bpm_in_sound_tempo_and_120bpm_in_metronome() -> ScorePartwise {
-        let direction = format!(
-            r#"<direction>
+        let direction = r#"<direction>
     <sound tempo="60"/>
     <direction-type>
         <metronome>
@@ -318,8 +317,7 @@ mod tests {
             <per-minute>120</per-minute>
         </metronome>
     </direction-type>
-</direction>"#
-        );
+</direction>"#;
 
         let measures = format!(
             r#"<measure number="1">
