@@ -4,7 +4,7 @@ use crate::model::{MeasureData, Pitch};
 
 use super::DiversityMetrics;
 
-fn calculate_diversity_metrics(measure_data: &[MeasureData]) -> DiversityMetrics {
+pub fn calculate_diversity_metrics(measure_data: &[MeasureData]) -> DiversityMetrics {
     let mut all_pitches: HashSet<Pitch> = HashSet::new();
 
     for data in measure_data {

@@ -8,3 +8,4 @@ pub mod diversity_metrics;
 pub use diversity_metrics::DiversityMetrics;
 
 pub mod note_diversity;
+pub use note_diversity::calculate_diversity_metrics;

@@ -1,10 +1,9 @@
 use std::env;
 use std::process;
 
-use musicxml::elements::ScorePartwise;
-use musicxml_analysis::DensityMetrics;
-use musicxml_analysis::calculate_density_metrics;
-use musicxml_analysis::extract_measure_data;
+use musicxml_analysis::analysis::calculate_density_metrics;
+use musicxml_analysis::analysis::calculate_diversity_metrics;
+use musicxml_analysis::extraction::musicxml::extract_measure_data;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -18,24 +17,26 @@ fn main() {
 
     match musicxml::read_score_partwise(file_path) {
         Ok(score) => {
-            let metrics = analyze_note_density(&score);
+            let measure_data = extract_measure_data(&score);
+            let density_metrics = calculate_density_metrics(&measure_data);
+            let diversity_metrics = calculate_diversity_metrics(&measure_data);
+
+            println!("=== Note Density ===");
             println!(
                 "Average: {:>5.2} notes/second",
-                metrics.average_notes_per_second
+                density_metrics.average_notes_per_second
             );
             println!(
                 "Peak   : {:>5.2} notes/second @ measure {}",
-                metrics.peak_notes_per_second, metrics.peak_measure
+                density_metrics.peak_notes_per_second, density_metrics.peak_measure
             );
+
+            println!("\n=== Pitch Diversity ===");
+            println!("Unique pitches: {}", diversity_metrics.total_unique_pitches);
         }
         Err(e) => {
             eprintln!("Error: {e}");
             process::exit(1);
         }
     }
-}
-
-pub fn analyze_note_density(score: &ScorePartwise) -> DensityMetrics {
-    let measure_data = extract_measure_data(score);
-    calculate_density_metrics(&measure_data)
 }
