@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use musicxml::{
     datatypes::NoteTypeValue,
     elements::{
@@ -6,7 +8,7 @@ use musicxml::{
     },
 };
 
-use crate::model::{MeasureData, TimeSignature};
+use crate::model::{MeasureData, NoteName, Pitch, TimeSignature, pitch::Accidental};
 
 pub fn extract_measure_data(score: &ScorePartwise) -> Vec<MeasureData> {
     let mut measure_data = Vec::new();
@@ -25,11 +27,13 @@ pub fn extract_measure_data(score: &ScorePartwise) -> Vec<MeasureData> {
                 }
 
                 let note_count = get_nr_notes_in_measure(measure);
+                let pitches = extract_pitches_from_measure(measure);
 
                 measure_data.push(MeasureData {
                     note_count,
                     tempo_bpm: current_bpm,
                     time_signature: current_time_sig,
+                    pitches,
                 });
             }
         }
@@ -175,8 +179,56 @@ fn get_nr_notes_in_measure(measure: &musicxml::elements::Measure) -> u32 {
     nr_notes
 }
 
+fn extract_pitches_from_measure(measure: &Measure) -> HashSet<Pitch> {
+    let mut pitches = HashSet::new();
+
+    for measure_content in &measure.content {
+        if let MeasureElement::Note(note) = measure_content {
+            if let NoteType::Normal(normal_info) = &note.content.info {
+                if let AudibleType::Pitch(pitch_info) = &normal_info.audible {
+                    let note_name = extract_note_name_from_pitch(pitch_info);
+                    let octave = *pitch_info.content.octave.content;
+                    let accidental = get_accidental_from_pitch(pitch_info);
+                    pitches.insert(Pitch::new(note_name, octave, accidental));
+                }
+            }
+        }
+    }
+
+    pitches
+}
+
+fn extract_note_name_from_pitch(musicxml_pitch: &musicxml::elements::Pitch) -> NoteName {
+    match musicxml_pitch.content.step.content {
+        musicxml::datatypes::Step::A => NoteName::A,
+        musicxml::datatypes::Step::B => NoteName::B,
+        musicxml::datatypes::Step::C => NoteName::C,
+        musicxml::datatypes::Step::D => NoteName::D,
+        musicxml::datatypes::Step::E => NoteName::E,
+        musicxml::datatypes::Step::F => NoteName::F,
+        musicxml::datatypes::Step::G => NoteName::G,
+    }
+}
+
+fn get_accidental_from_pitch(musicxml_pitch: &musicxml::elements::Pitch) -> Accidental {
+    if let Some(alter) = &musicxml_pitch.content.alter {
+        match *alter.content {
+            -2 => Accidental::DoubleFlat,
+            -1 => Accidental::Flat,
+            0 => Accidental::Natural,
+            1 => Accidental::Sharp,
+            2 => Accidental::DoubleSharp,
+            _ => panic!("Unsupported alter {}", *alter.content),
+        }
+    } else {
+        Accidental::Natural
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use crate::model::{NoteName, Pitch, pitch::Accidental};
+
     use super::*;
 
     #[test]
@@ -208,6 +260,10 @@ mod tests {
             note_count: 2,
             tempo_bpm: 120.0,                         // Default
             time_signature: TimeSignature::new(4, 4), // Default
+            pitches: HashSet::from([
+                Pitch::new(NoteName::C, 4, Accidental::Natural),
+                Pitch::new(NoteName::D, 4, Accidental::Natural),
+            ]),
         }];
         assert_eq!(actual, expected);
     }
@@ -238,11 +294,16 @@ mod tests {
                 note_count: 1,
                 tempo_bpm: 120.0,
                 time_signature: TimeSignature::new(4, 4),
+                pitches: HashSet::from([Pitch::new(NoteName::C, 4, Accidental::Natural)]),
             },
             MeasureData {
                 note_count: 2,
                 tempo_bpm: 120.0,
                 time_signature: TimeSignature::new(4, 4),
+                pitches: HashSet::from([
+                    Pitch::new(NoteName::D, 4, Accidental::Natural),
+                    Pitch::new(NoteName::E, 4, Accidental::Natural),
+                ]),
             },
         ];
         assert_eq!(actual, expected);
@@ -277,6 +338,7 @@ mod tests {
             note_count: 0,
             tempo_bpm: 60.0,
             time_signature: TimeSignature::new(4, 4),
+            pitches: HashSet::new(),
         }];
         assert_eq!(actual, expected);
     }
@@ -304,6 +366,7 @@ mod tests {
             note_count: 0,
             tempo_bpm: 60.0,
             time_signature: TimeSignature::new(4, 4),
+            pitches: HashSet::new(),
         }];
         assert_eq!(actual, expected);
     }
@@ -397,6 +460,7 @@ mod tests {
             note_count: 0,
             tempo_bpm: 120.0,
             time_signature: TimeSignature::new(4, 4),
+            pitches: HashSet::new(),
         }];
         assert_eq!(actual, expected);
     }
@@ -424,6 +488,7 @@ mod tests {
             note_count: 0,
             tempo_bpm: 120.0,
             time_signature: TimeSignature::new(4, 4),
+            pitches: HashSet::new(),
         }];
         assert_eq!(actual, expected);
     }
@@ -451,6 +516,7 @@ mod tests {
             note_count: 0,
             tempo_bpm: 60.0 * 3.0,
             time_signature: TimeSignature::new(3, 4),
+            pitches: HashSet::new(),
         }];
         assert_eq!(actual, expected);
     }

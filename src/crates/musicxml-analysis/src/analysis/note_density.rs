@@ -37,6 +37,8 @@ pub fn calculate_density_metrics(measure_data: &[MeasureData]) -> DensityMetrics
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use assert_float_eq::assert_float_absolute_eq;
 
     use crate::model::TimeSignature;
@@ -63,6 +65,7 @@ mod tests {
             note_count: 0,
             tempo_bpm: 120.0,
             time_signature: TimeSignature::new(4, 4),
+            pitches: HashSet::new(),
         }];
 
         // Act
@@ -81,6 +84,7 @@ mod tests {
             note_count: 2,
             tempo_bpm: 120.0,
             time_signature: TimeSignature::new(4, 4),
+            pitches: HashSet::new(),
         }];
 
         // Act
@@ -102,11 +106,13 @@ mod tests {
                 note_count: 1,
                 tempo_bpm: 120.0,
                 time_signature: TimeSignature::new(4, 4),
+                pitches: HashSet::new(),
             },
             MeasureData {
                 note_count: 2,
                 tempo_bpm: 60.0,
                 time_signature: TimeSignature::new(4, 4),
+                pitches: HashSet::new(),
             },
         ];
 
@@ -131,11 +137,13 @@ mod tests {
                 note_count: 1,
                 tempo_bpm: 120.0,
                 time_signature: TimeSignature::new(4, 4),
+                pitches: HashSet::new(),
             },
             MeasureData {
                 note_count: 1,
                 tempo_bpm: 120.0,
                 time_signature: TimeSignature::new(3, 4),
+                pitches: HashSet::new(),
             },
         ];
 

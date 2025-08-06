@@ -1,3 +1,7 @@
+use std::collections::HashSet;
+
+use crate::model::Pitch;
+
 use super::TimeSignature;
 
 #[derive(Debug, PartialEq)]
@@ -5,6 +9,7 @@ pub struct MeasureData {
     pub note_count: u32,
     pub tempo_bpm: f64,
     pub time_signature: TimeSignature,
+    pub pitches: HashSet<Pitch>,
 }
 
 impl MeasureData {
@@ -28,6 +33,7 @@ mod tests {
             note_count: 4,
             tempo_bpm: 120.0,
             time_signature: TimeSignature::new(4, 4),
+            pitches: HashSet::new(),
         };
 
         // Act
