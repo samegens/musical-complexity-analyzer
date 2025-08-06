@@ -21,6 +21,20 @@ Later mark these tracks as 'challenge'.
 - [Prelude Op. 28 No. 16 - Chopin](https://musescore.com/classicman/scores/73000)
 - [La Campanella - Liszt](test-files/La_Campanella_-_Grandes_Etudes_de_Paganini_No._3_-_Franz_Liszt.musicxml) ([original](https://github.com/musetrainer/library/blob/master/scores/La_Campanella_-_Grandes_Etudes_de_Paganini_No._3_-_Franz_Liszt.mxl))
 
+### Note diversity
+
+How many different notes a piece contains. We use notational diversity,
+which means that enharmonically equivalent notes (like E-sharp and F-flat)
+are counted as different pitches based on how they're written in the score. 
+
+#### Easiest
+
+- [Hot Cross Buns](test-files/hot_cross_buns.musicxml)
+
+#### Hardest
+
+- [Furiant No. 1](test-files/Furiant_No1.musicxml) ([original](https://musescore.com/user/29416258/scores/14177191))
+
 ### Harmonic complexity
 
 Chord structures, key changes, accidentals
