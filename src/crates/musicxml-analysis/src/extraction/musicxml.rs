@@ -100,6 +100,7 @@ fn extract_bpm_from_beat_based(beat_based: &musicxml::elements::BeatBased) -> Op
     let quarter_note_bpm = match &beat_based.beat_unit.content {
         NoteTypeValue::Quarter => per_minute,
         NoteTypeValue::Half => per_minute * 2.0,
+        NoteTypeValue::Eighth => per_minute / 2.0,
         _ => {
             panic!(
                 "Unsupported beat unit for BPM extraction: {:?}",
@@ -499,6 +500,34 @@ mod tests {
     {}
 </measure>"#,
             create_metronome("half", 60)
+        );
+        create_test_score(&measures)
+    }
+
+    #[test]
+    fn test_extract_measure_data_with_eighth_note_metronome() {
+        // Arrange
+        let score = create_musicxml_dom_with_eighth_note_metronome();
+
+        // Act
+        let actual = extract_measure_data(&score);
+
+        // Assert
+        let expected = vec![MeasureData {
+            note_count: 0,
+            tempo_bpm: 60.0, // 120 eighth notes per minute = 60 quarter notes per minute
+            time_signature: TimeSignature::new(4, 4),
+            pitches: HashSet::new(),
+        }];
+        assert_eq!(actual, expected);
+    }
+
+    fn create_musicxml_dom_with_eighth_note_metronome() -> ScorePartwise {
+        let measures = format!(
+            r#"<measure number="1">
+    {}
+</measure>"#,
+            create_metronome("eighth", 120)
         );
         create_test_score(&measures)
     }
