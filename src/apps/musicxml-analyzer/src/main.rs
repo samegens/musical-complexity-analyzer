@@ -100,7 +100,7 @@ fn print_analysis_results(file_path: &str, score: &musicxml::elements::ScorePart
     let density_metrics = calculate_density_metrics(&measure_data);
     let diversity_metrics = calculate_diversity_metrics(&measure_data);
 
-    println!("=== {} ===", file_path);
+    println!("=== {file_path} ===");
     println!("Note Density:");
     println!(
         "  Average: {:>5.2} notes/second",
