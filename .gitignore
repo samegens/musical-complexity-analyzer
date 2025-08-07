@@ -6,5 +6,8 @@ target/
 *.xml
 codecov.json
 
+# Test set
+/test-set
+
 # Noise
 /.ansible
