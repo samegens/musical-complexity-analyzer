@@ -29,9 +29,10 @@ fn main() {
 }
 
 fn analyze_single_file(file_path: &str) {
+    println!("Analyzing: {file_path}...");
     match musicxml::read_score_partwise(file_path) {
         Ok(score) => {
-            print_analysis_results(file_path, &score);
+            print_analysis_results(&score);
         }
         Err(e) => {
             eprintln!("Error analyzing '{file_path}': {e}");
@@ -60,15 +61,7 @@ fn analyze_directory(dir_path: &str) {
     );
 
     for file_path in musicxml_files {
-        match musicxml::read_score_partwise(&file_path) {
-            Ok(score) => {
-                print_analysis_results(&file_path, &score);
-                println!();
-            }
-            Err(e) => {
-                eprintln!("Error analyzing '{file_path}': {e}");
-            }
-        }
+        analyze_single_file(&file_path);
     }
 }
 
@@ -95,12 +88,11 @@ fn find_musicxml_files(dir_path: &str) -> Result<Vec<String>, std::io::Error> {
     Ok(musicxml_files)
 }
 
-fn print_analysis_results(file_path: &str, score: &musicxml::elements::ScorePartwise) {
+fn print_analysis_results(score: &musicxml::elements::ScorePartwise) {
     let measure_data = extract_measure_data(score);
     let density_metrics = calculate_density_metrics(&measure_data);
     let diversity_metrics = calculate_diversity_metrics(&measure_data);
 
-    println!("=== {file_path} ===");
     println!("Note Density:");
     println!(
         "  Average: {:>5.2} notes/second",
@@ -115,4 +107,5 @@ fn print_analysis_results(file_path: &str, score: &musicxml::elements::ScorePart
         "  Unique pitches: {}",
         diversity_metrics.total_unique_pitches
     );
+    println!();
 }
