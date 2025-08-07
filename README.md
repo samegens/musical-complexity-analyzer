@@ -24,7 +24,7 @@ Later mark these tracks as 'challenge'.
 ### Note diversity
 
 How many different notes a piece contains. We use notational diversity,
-which means that enharmonically equivalent notes (like E-sharp and F-flat)
+which means that enharmonically equivalent notes (like C-sharp and D-flat)
 are counted as different pitches based on how they're written in the score. 
 
 #### Easiest
