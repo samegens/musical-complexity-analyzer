@@ -62,29 +62,27 @@ fn main() {
         process::exit(1);
     };
 
-    // Print results
     for piece in &piece_data {
         print_piece_results(piece);
         println!();
     }
 
-    // Always generate charts
     if piece_data.len() > 1 {
         println!("Generating charts...");
 
-        let density_path = format!("{output_dir}/density_histogram.svg");
-        let diversity_path = format!("{output_dir}/diversity_histogram.svg");
+        let density_path = format!("{output_dir}/note_density_histogram.svg");
+        let diversity_path = format!("{output_dir}/pitch_diversity_histogram.svg");
 
-        if let Err(e) = generate_density_histogram(&piece_data, &density_path) {
-            eprintln!("Failed to generate density chart: {e}");
+        if let Err(e) = generate_note_density_histogram(&piece_data, &density_path) {
+            eprintln!("Failed to generate note density chart: {e}");
         } else {
-            println!("Density histogram saved to: {density_path}");
+            println!("Note density histogram saved to: {density_path}");
         }
 
-        if let Err(e) = generate_diversity_histogram(&piece_data, &diversity_path) {
-            eprintln!("Failed to generate diversity chart: {e}");
+        if let Err(e) = generate_pitch_diversity_histogram(&piece_data, &diversity_path) {
+            eprintln!("Failed to generate pitch diversity chart: {e}");
         } else {
-            println!("Diversity histogram saved to: {diversity_path}");
+            println!("Pitch diversity histogram saved to: {diversity_path}");
         }
     } else {
         println!("Skipping chart generation (need multiple pieces for meaningful charts)");
@@ -194,7 +192,7 @@ fn print_piece_results(piece: &PieceData) {
     println!("  Unique pitches: {}", piece.diversity);
 }
 
-fn generate_density_histogram(
+fn generate_note_density_histogram(
     data: &[PieceData],
     output_path: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -238,7 +236,7 @@ fn generate_density_histogram(
     Ok(())
 }
 
-fn generate_diversity_histogram(
+fn generate_pitch_diversity_histogram(
     data: &[PieceData],
     output_path: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
