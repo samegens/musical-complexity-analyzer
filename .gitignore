@@ -9,5 +9,8 @@ codecov.json
 # Test set
 /test-set
 
+# Generated graphs
+*.svg
+
 # Noise
 /.ansible

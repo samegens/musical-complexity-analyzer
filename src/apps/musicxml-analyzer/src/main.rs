@@ -1,111 +1,283 @@
-use std::env;
+use musicxml_analysis::analysis::calculate_density_metrics;
+use musicxml_analysis::analysis::calculate_diversity_metrics;
+use musicxml_analysis::extraction::musicxml::extract_measure_data;
+use plotters::prelude::*;
 use std::fs;
 use std::path::Path;
 use std::process;
 
-use musicxml_analysis::analysis::calculate_density_metrics;
-use musicxml_analysis::analysis::calculate_diversity_metrics;
-use musicxml_analysis::extraction::musicxml::extract_measure_data;
+#[derive(Debug)]
+struct PieceData {
+    name: String,
+    avg_density: f64,
+    peak_density: f64,
+    diversity: u32,
+}
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
+    let args: Vec<String> = std::env::args().collect();
 
-    if args.len() != 2 {
-        eprintln!("Usage: {} <path to musicxml file or directory>", args[0]);
+    if args.len() < 2 {
+        eprintln!(
+            "Usage: {} [--output-dir <dir>] <path to musicxml file or directory>",
+            args[0]
+        );
         process::exit(1);
     }
 
-    let input_path = &args[1];
-    let path = Path::new(input_path);
+    // Parse arguments
+    let mut output_dir = ".".to_string();
+    let mut input_path = None;
 
-    if path.is_file() {
-        analyze_single_file(input_path);
+    let mut i = 1;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--output-dir" => {
+                if i + 1 >= args.len() {
+                    eprintln!("--output-dir requires a directory path");
+                    process::exit(1);
+                }
+                output_dir = args[i + 1].clone();
+                i += 2;
+            }
+            _ => {
+                input_path = Some(args[i].clone());
+                i += 1;
+            }
+        }
+    }
+
+    let input_path = input_path.unwrap_or_else(|| {
+        eprintln!("No input path provided");
+        process::exit(1);
+    });
+
+    let path = Path::new(&input_path);
+    let piece_data = if path.is_file() {
+        vec![analyze_file(&input_path)]
     } else if path.is_dir() {
-        analyze_directory(input_path);
+        analyze_directory(&input_path)
     } else {
         eprintln!("Error: '{input_path}' is not a valid file or directory");
         process::exit(1);
-    }
-}
-
-fn analyze_single_file(file_path: &str) {
-    println!("Analyzing: {file_path}...");
-    match musicxml::read_score_partwise(file_path) {
-        Ok(score) => {
-            print_analysis_results(&score);
-        }
-        Err(e) => {
-            eprintln!("Error analyzing '{file_path}': {e}");
-            process::exit(1);
-        }
-    }
-}
-
-fn analyze_directory(dir_path: &str) {
-    let musicxml_files = match find_musicxml_files(dir_path) {
-        Ok(files) => files,
-        Err(e) => {
-            eprintln!("Error reading directory '{dir_path}': {e}");
-            process::exit(1);
-        }
     };
 
-    if musicxml_files.is_empty() {
+    // Print results
+    for piece in &piece_data {
+        print_piece_results(piece);
+        println!();
+    }
+
+    // Always generate charts
+    if piece_data.len() > 1 {
+        println!("Generating charts...");
+
+        let density_path = format!("{output_dir}/density_histogram.svg");
+        let diversity_path = format!("{output_dir}/diversity_histogram.svg");
+
+        if let Err(e) = generate_density_histogram(&piece_data, &density_path) {
+            eprintln!("Failed to generate density chart: {e}");
+        } else {
+            println!("Density histogram saved to: {density_path}");
+        }
+
+        if let Err(e) = generate_diversity_histogram(&piece_data, &diversity_path) {
+            eprintln!("Failed to generate diversity chart: {e}");
+        } else {
+            println!("Diversity histogram saved to: {diversity_path}");
+        }
+    } else {
+        println!("Skipping chart generation (need multiple pieces for meaningful charts)");
+    }
+}
+
+fn analyze_file(file_path: &str) -> PieceData {
+    println!("Analyzing: {file_path}");
+
+    let score = musicxml::read_score_partwise(file_path).unwrap_or_else(|e| {
+        eprintln!("Failed to parse '{file_path}': {e}");
+        process::exit(1);
+    });
+
+    let measure_data = extract_measure_data(&score);
+    let density = calculate_density_metrics(&measure_data);
+    let diversity = calculate_diversity_metrics(&measure_data);
+
+    let name = Path::new(file_path)
+        .file_stem()
+        .unwrap()
+        .to_string_lossy()
+        .to_string();
+
+    PieceData {
+        name,
+        avg_density: density.average_notes_per_second,
+        peak_density: density.peak_notes_per_second,
+        diversity: diversity.total_unique_pitches,
+    }
+}
+
+fn analyze_directory(dir_path: &str) -> Vec<PieceData> {
+    let files = find_musicxml_files(dir_path).unwrap_or_else(|e| {
+        eprintln!("Error reading directory '{dir_path}': {e}");
+        process::exit(1);
+    });
+
+    if files.is_empty() {
         println!("No MusicXML files found in directory '{dir_path}'");
-        return;
+        return Vec::new();
     }
 
-    println!(
-        "Found {} MusicXML files in '{dir_path}':\n",
-        musicxml_files.len()
-    );
+    println!("Found {} MusicXML files in '{dir_path}':\n", files.len());
 
-    for file_path in musicxml_files {
-        analyze_single_file(&file_path);
+    let mut piece_data = Vec::new();
+
+    for file_path in files {
+        match analyze_single_file(&file_path) {
+            Ok(data) => piece_data.push(data),
+            Err(e) => eprintln!("Failed to analyze '{file_path}': {e}"),
+        }
     }
+
+    piece_data
+}
+
+fn analyze_single_file(file_path: &str) -> Result<PieceData, String> {
+    println!("Analyzing: {file_path}");
+
+    let score =
+        musicxml::read_score_partwise(file_path).map_err(|e| format!("Parse error: {e}"))?;
+
+    let measure_data = extract_measure_data(&score);
+    let density = calculate_density_metrics(&measure_data);
+    let diversity = calculate_diversity_metrics(&measure_data);
+
+    let name = Path::new(file_path)
+        .file_stem()
+        .unwrap()
+        .to_string_lossy()
+        .to_string();
+
+    Ok(PieceData {
+        name,
+        avg_density: density.average_notes_per_second,
+        peak_density: density.peak_notes_per_second,
+        diversity: diversity.total_unique_pitches,
+    })
 }
 
 fn find_musicxml_files(dir_path: &str) -> Result<Vec<String>, std::io::Error> {
-    let mut musicxml_files = Vec::new();
+    let mut files = Vec::new();
 
     for entry in fs::read_dir(dir_path)? {
-        let entry = entry?;
-        let path = entry.path();
-
-        if path.is_file() {
-            if let Some(extension) = path.extension() {
-                let ext = extension.to_string_lossy().to_lowercase();
-                if ext == "musicxml" || ext == "mxl" {
-                    if let Some(path_str) = path.to_str() {
-                        musicxml_files.push(path_str.to_string());
-                    }
+        let path = entry?.path();
+        if let Some(ext) = path.extension() {
+            let ext = ext.to_string_lossy().to_lowercase();
+            if matches!(ext.as_str(), "musicxml" | "mxl") {
+                if let Some(path_str) = path.to_str() {
+                    files.push(path_str.to_string());
                 }
             }
         }
     }
 
-    musicxml_files.sort();
-    Ok(musicxml_files)
+    files.sort();
+    Ok(files)
 }
 
-fn print_analysis_results(score: &musicxml::elements::ScorePartwise) {
-    let measure_data = extract_measure_data(score);
-    let density_metrics = calculate_density_metrics(&measure_data);
-    let diversity_metrics = calculate_diversity_metrics(&measure_data);
-
+fn print_piece_results(piece: &PieceData) {
+    println!("=== {} ===", piece.name);
     println!("Note Density:");
-    println!(
-        "  Average: {:>5.2} notes/second",
-        density_metrics.average_notes_per_second
-    );
-    println!(
-        "  Peak   : {:>5.2} notes/second @ measure {}",
-        density_metrics.peak_notes_per_second, density_metrics.peak_measure
-    );
+    println!("  Average: {:>5.2} notes/second", piece.avg_density);
+    println!("  Peak   : {:>5.2} notes/second", piece.peak_density);
     println!("Pitch Diversity:");
-    println!(
-        "  Unique pitches: {}",
-        diversity_metrics.total_unique_pitches
-    );
-    println!();
+    println!("  Unique pitches: {}", piece.diversity);
+}
+
+fn generate_density_histogram(
+    data: &[PieceData],
+    output_path: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let root = SVGBackend::new(output_path, (800, 600)).into_drawing_area();
+    root.fill(&WHITE)?;
+
+    let densities: Vec<f64> = data.iter().map(|d| d.avg_density).collect();
+    let max_density = densities.iter().fold(0.0f64, |a, &b| a.max(b));
+
+    // Create 10 bins
+    let bin_size = max_density / 10.0;
+    let mut bins = [0; 10];
+
+    for density in &densities {
+        let bin_index = ((density / bin_size) as usize).min(9);
+        bins[bin_index] += 1;
+    }
+
+    let max_count = *bins.iter().max().unwrap();
+
+    let mut chart = ChartBuilder::on(&root)
+        .caption("Note Density Distribution", ("sans-serif", 40))
+        .margin(20)
+        .x_label_area_size(60)
+        .y_label_area_size(60)
+        .build_cartesian_2d(0f64..max_density, 0..(max_count + 1))?;
+
+    chart
+        .configure_mesh()
+        .x_desc("Average Note Density (notes/second)")
+        .y_desc("Number of Pieces")
+        .draw()?;
+
+    chart.draw_series(bins.iter().enumerate().map(|(i, &count)| {
+        let x0 = i as f64 * bin_size;
+        let x1 = (i + 1) as f64 * bin_size;
+        Rectangle::new([(x0, 0), (x1, count)], BLUE.filled())
+    }))?;
+
+    root.present()?;
+    Ok(())
+}
+
+fn generate_diversity_histogram(
+    data: &[PieceData],
+    output_path: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let root = SVGBackend::new(output_path, (800, 600)).into_drawing_area();
+    root.fill(&WHITE)?;
+
+    let diversities: Vec<u32> = data.iter().map(|d| d.diversity).collect();
+    let max_diversity = *diversities.iter().max().unwrap();
+
+    // Create 10 bins
+    let bin_size = max_diversity.div_ceil(10);
+    let mut bins = [0; 10];
+
+    for diversity in &diversities {
+        let bin_index = ((diversity / bin_size) as usize).min(9);
+        bins[bin_index] += 1;
+    }
+
+    let max_count = *bins.iter().max().unwrap();
+
+    let mut chart = ChartBuilder::on(&root)
+        .caption("Pitch Diversity Distribution", ("sans-serif", 40))
+        .margin(20)
+        .x_label_area_size(60)
+        .y_label_area_size(60)
+        .build_cartesian_2d(0..max_diversity, 0..(max_count + 1))?;
+
+    chart
+        .configure_mesh()
+        .x_desc("Unique Pitches")
+        .y_desc("Number of Pieces")
+        .draw()?;
+
+    chart.draw_series(bins.iter().enumerate().map(|(i, &count)| {
+        let x0 = i as u32 * bin_size;
+        let x1 = (i + 1) as u32 * bin_size;
+        Rectangle::new([(x0, 0), (x1, count)], RED.filled())
+    }))?;
+
+    root.present()?;
+    Ok(())
 }
