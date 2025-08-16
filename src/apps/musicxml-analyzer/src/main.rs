@@ -12,6 +12,7 @@ struct PieceData {
     avg_density: f64,
     peak_density: f64,
     diversity: u32,
+    total_note_count: u32,
 }
 
 fn main() {
@@ -90,29 +91,10 @@ fn main() {
 }
 
 fn analyze_file(file_path: &str) -> PieceData {
-    println!("Analyzing: {file_path}");
-
-    let score = musicxml::read_score_partwise(file_path).unwrap_or_else(|e| {
-        eprintln!("Failed to parse '{file_path}': {e}");
+    analyze_single_file(file_path).unwrap_or_else(|e| {
+        eprintln!("Failed to analyze '{file_path}': {e}");
         process::exit(1);
-    });
-
-    let measure_data = extract_measure_data(&score);
-    let density = calculate_density_metrics(&measure_data);
-    let diversity = calculate_diversity_metrics(&measure_data);
-
-    let name = Path::new(file_path)
-        .file_stem()
-        .unwrap()
-        .to_string_lossy()
-        .to_string();
-
-    PieceData {
-        name,
-        avg_density: density.average_notes_per_second,
-        peak_density: density.peak_notes_per_second,
-        diversity: diversity.total_unique_pitches,
-    }
+    })
 }
 
 fn analyze_directory(dir_path: &str) -> Vec<PieceData> {
@@ -161,6 +143,7 @@ fn analyze_single_file(file_path: &str) -> Result<PieceData, String> {
         avg_density: density.average_notes_per_second,
         peak_density: density.peak_notes_per_second,
         diversity: diversity.total_unique_pitches,
+        total_note_count: density.total_note_count,
     })
 }
 
@@ -188,8 +171,9 @@ fn print_piece_results(piece: &PieceData) {
     println!("Note Density:");
     println!("  Average: {:>5.2} notes/second", piece.avg_density);
     println!("  Peak   : {:>5.2} notes/second", piece.peak_density);
+    println!("  # notes: {}", piece.total_note_count);
     println!("Pitch Diversity:");
-    println!("  Unique pitches: {}", piece.diversity);
+    println!("  # unique pitches: {}", piece.diversity);
 }
 
 fn generate_note_density_histogram(
