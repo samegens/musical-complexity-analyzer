@@ -154,10 +154,10 @@ fn find_musicxml_files(dir_path: &str) -> Result<Vec<String>, std::io::Error> {
         let path = entry?.path();
         if let Some(ext) = path.extension() {
             let ext = ext.to_string_lossy().to_lowercase();
-            if matches!(ext.as_str(), "musicxml" | "mxl") {
-                if let Some(path_str) = path.to_str() {
-                    files.push(path_str.to_string());
-                }
+            if matches!(ext.as_str(), "musicxml" | "mxl")
+                && let Some(path_str) = path.to_str()
+            {
+                files.push(path_str.to_string());
             }
         }
     }

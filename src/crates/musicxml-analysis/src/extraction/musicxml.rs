@@ -45,12 +45,11 @@ pub fn extract_measure_data(score: &ScorePartwise) -> Vec<MeasureData> {
 fn extract_bpm_from_score(score: &ScorePartwise) -> f64 {
     const DEFAULT_BPM: f64 = 120.0;
 
-    if let Some(first_part) = score.content.part.first() {
-        if let Some(PartElement::Measure(first_measure)) = first_part.content.first() {
-            if let Some(tempo) = extract_bpm_from_measure(first_measure) {
-                return tempo;
-            }
-        }
+    if let Some(first_part) = score.content.part.first()
+        && let Some(PartElement::Measure(first_measure)) = first_part.content.first()
+        && let Some(tempo) = extract_bpm_from_measure(first_measure)
+    {
+        return tempo;
     }
 
     DEFAULT_BPM
@@ -59,10 +58,10 @@ fn extract_bpm_from_score(score: &ScorePartwise) -> f64 {
 fn extract_bpm_from_measure(measure: &Measure) -> Option<f64> {
     for measure_content in &measure.content {
         if let MeasureElement::Direction(direction) = measure_content {
-            if let Some(sound) = &direction.content.sound {
-                if let Some(tempo) = &sound.attributes.tempo {
-                    return Some(**tempo);
-                }
+            if let Some(sound) = &direction.content.sound
+                && let Some(tempo) = &sound.attributes.tempo
+            {
+                return Some(**tempo);
             }
 
             for direction_type in &direction.content.direction_type {
@@ -119,10 +118,10 @@ fn extract_bpm_from_beat_based(beat_based: &musicxml::elements::BeatBased) -> Op
 fn extract_time_signature_from_score(score: &ScorePartwise) -> TimeSignature {
     if let Some(first_part) = score.content.part.first() {
         for part_element in &first_part.content {
-            if let PartElement::Measure(measure) = part_element {
-                if let Some(time_sig) = extract_time_signature_from_measure(measure) {
-                    return time_sig;
-                }
+            if let PartElement::Measure(measure) = part_element
+                && let Some(time_sig) = extract_time_signature_from_measure(measure)
+            {
+                return time_sig;
             }
         }
     }
@@ -135,31 +134,31 @@ fn extract_time_signature_from_score(score: &ScorePartwise) -> TimeSignature {
 
 fn extract_time_signature_from_measure(measure: &Measure) -> Option<TimeSignature> {
     for measure_content in &measure.content {
-        if let MeasureElement::Attributes(attributes) = measure_content {
-            if let Some(first_time) = attributes.content.time.first() {
-                let numerator = first_time
-                    .content
-                    .beats
-                    .first()
-                    .unwrap()
-                    .beats
-                    .content
-                    .parse()
-                    .ok()?;
-                let denominator = first_time
-                    .content
-                    .beats
-                    .first()
-                    .unwrap()
-                    .beat_type
-                    .content
-                    .parse()
-                    .ok()?;
-                return Some(TimeSignature {
-                    numerator,
-                    denominator,
-                });
-            }
+        if let MeasureElement::Attributes(attributes) = measure_content
+            && let Some(first_time) = attributes.content.time.first()
+        {
+            let numerator = first_time
+                .content
+                .beats
+                .first()
+                .unwrap()
+                .beats
+                .content
+                .parse()
+                .ok()?;
+            let denominator = first_time
+                .content
+                .beats
+                .first()
+                .unwrap()
+                .beat_type
+                .content
+                .parse()
+                .ok()?;
+            return Some(TimeSignature {
+                numerator,
+                denominator,
+            });
         }
     }
 
@@ -169,12 +168,11 @@ fn extract_time_signature_from_measure(measure: &Measure) -> Option<TimeSignatur
 fn get_nr_notes_in_measure(measure: &musicxml::elements::Measure) -> u32 {
     let mut nr_notes = 0;
     for measure_content in &measure.content {
-        if let MeasureElement::Note(note) = measure_content {
-            if let NoteType::Normal(normal_info) = &note.content.info {
-                if let AudibleType::Pitch(_) = &normal_info.audible {
-                    nr_notes += 1;
-                }
-            }
+        if let MeasureElement::Note(note) = measure_content
+            && let NoteType::Normal(normal_info) = &note.content.info
+            && let AudibleType::Pitch(_) = &normal_info.audible
+        {
+            nr_notes += 1;
         }
     }
     nr_notes
@@ -184,15 +182,14 @@ fn extract_pitches_from_measure(measure: &Measure) -> HashSet<Pitch> {
     let mut pitches = HashSet::new();
 
     for measure_content in &measure.content {
-        if let MeasureElement::Note(note) = measure_content {
-            if let NoteType::Normal(normal_info) = &note.content.info {
-                if let AudibleType::Pitch(pitch_info) = &normal_info.audible {
-                    let note_name = extract_note_name_from_pitch(pitch_info);
-                    let octave = *pitch_info.content.octave.content;
-                    let accidental = get_accidental_from_pitch(pitch_info);
-                    pitches.insert(Pitch::new(note_name, octave, accidental));
-                }
-            }
+        if let MeasureElement::Note(note) = measure_content
+            && let NoteType::Normal(normal_info) = &note.content.info
+            && let AudibleType::Pitch(pitch_info) = &normal_info.audible
+        {
+            let note_name = extract_note_name_from_pitch(pitch_info);
+            let octave = *pitch_info.content.octave.content;
+            let accidental = get_accidental_from_pitch(pitch_info);
+            pitches.insert(Pitch::new(note_name, octave, accidental));
         }
     }
 
