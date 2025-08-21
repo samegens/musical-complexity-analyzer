@@ -21,16 +21,11 @@ Packages for musicxml-analyzer:
 Notes per second. Separate average and peak. For now, discard tracks where peak is significantly higher than average.
 Later mark these tracks as 'challenge'.
 
-#### Easiest
+- easiest: [Twinkle twinkle](test-files/twinkle-little-star-60bpm.musicxml) at 60 BPM
+- hardest: [Prelude Op. 28 No. 16 - Chopin](https://musescore.com/classicman/scores/73000) or
+[La Campanella - Liszt](test-files/La_Campanella_-_Grandes_Etudes_de_Paganini_No._3_-_Franz_Liszt.musicxml) ([original](https://github.com/musetrainer/library/blob/master/scores/La_Campanella_-_Grandes_Etudes_de_Paganini_No._3_-_Franz_Liszt.mxl))
 
-- [Twinkle twinkle](test-files/twinkle-little-star-60bpm.musicxml) at 60 BPM
-
-#### Hardest
-
-- [Prelude Op. 28 No. 16 - Chopin](https://musescore.com/classicman/scores/73000)
-- [La Campanella - Liszt](test-files/La_Campanella_-_Grandes_Etudes_de_Paganini_No._3_-_Franz_Liszt.musicxml) ([original](https://github.com/musetrainer/library/blob/master/scores/La_Campanella_-_Grandes_Etudes_de_Paganini_No._3_-_Franz_Liszt.mxl))
-
-### Note diversity
+### Pitch diversity
 
 How many different notes a piece contains. We use notational diversity,
 which means that enharmonically equivalent notes (like C-sharp and D-flat)
