@@ -36,13 +36,8 @@ How many different notes a piece contains. We use notational diversity,
 which means that enharmonically equivalent notes (like C-sharp and D-flat)
 are counted as different pitches based on how they're written in the score.
 
-#### Easiest
-
-- [Hot Cross Buns](test-files/hot_cross_buns.musicxml)
-
-#### Hardest
-
-- [Furiant No. 1](test-files/Furiant_No1.musicxml) ([original](https://musescore.com/user/29416258/scores/14177191))
+- easiest: [Hot Cross Buns](test-files/hot_cross_buns.musicxml)
+- hardest: [Furiant No. 1](test-files/Furiant_No1.musicxml) ([original](https://musescore.com/user/29416258/scores/14177191))
 
 ### Harmonic complexity
 
@@ -68,10 +63,5 @@ Ledger lines, clef changes, visual density
 
 How challenging the rhythmic patterns are to execute
 
-#### Easiest
-
-4/4
-
-#### Hardest
-
-complex changing rhythms hardest (The Dance of Eternity - Dream Theatre)
+- easiest: 4/4
+- hardest: complex changing rhythms hardest (The Dance of Eternity - Dream Theatre)
