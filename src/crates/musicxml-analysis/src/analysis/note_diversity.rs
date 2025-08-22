@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crate::model::{MeasureData, Pitch};
+use crate::model::{MeasureData, PianoKey, Pitch};
 
 use super::DiversityMetrics;
 
@@ -11,8 +11,15 @@ pub fn calculate_diversity_metrics(measure_data: &[MeasureData]) -> DiversityMet
         all_pitches.extend(&data.pitches);
     }
 
+    let mut all_keys: HashSet<PianoKey> = HashSet::new();
+    for pitch in &all_pitches {
+        let key = PianoKey::from_pitch(pitch);
+        all_keys.insert(key);
+    }
+
     DiversityMetrics {
         total_unique_pitches: all_pitches.len() as u32,
+        total_unique_keys: all_keys.len() as u32,
     }
 }
 
@@ -32,6 +39,7 @@ mod tests {
         // Assert
         let expected = DiversityMetrics {
             total_unique_pitches: 0,
+            total_unique_keys: 0,
         };
         assert_eq!(actual, expected);
     }
@@ -58,6 +66,7 @@ mod tests {
         // Assert
         let expected = DiversityMetrics {
             total_unique_pitches: 3,
+            total_unique_keys: 3,
         };
         assert_eq!(actual, expected);
     }
@@ -88,6 +97,39 @@ mod tests {
         // Assert
         let expected = DiversityMetrics {
             total_unique_pitches: 1,
+            total_unique_keys: 1,
+        };
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_calculate_diversity_metrics_multiple_measures_same_key_different_pitch() {
+        // Arrange
+        let c4_sharp_pitch = Pitch::new(NoteName::C, 4, Accidental::Sharp);
+        let d4_flat_pitch = Pitch::new(NoteName::D, 4, Accidental::Flat);
+
+        let measure_data = vec![
+            MeasureData {
+                note_count: 1,
+                pitches: HashSet::from([c4_sharp_pitch]),
+                tempo_bpm: 120.0,
+                time_signature: TimeSignature::new(4, 4),
+            },
+            MeasureData {
+                note_count: 1,
+                pitches: HashSet::from([d4_flat_pitch]),
+                tempo_bpm: 120.0,
+                time_signature: TimeSignature::new(4, 4),
+            },
+        ];
+
+        // Act
+        let actual = calculate_diversity_metrics(&measure_data);
+
+        // Assert
+        let expected = DiversityMetrics {
+            total_unique_pitches: 2,
+            total_unique_keys: 1,
         };
         assert_eq!(actual, expected);
     }
