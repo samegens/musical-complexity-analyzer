@@ -6,3 +6,6 @@ pub use pitch::{Accidental, NoteName, Pitch};
 
 pub mod time_signature;
 pub use time_signature::TimeSignature;
+
+pub mod piano_key;
+pub use piano_key::{ChromaticNoteName, PianoKey};
