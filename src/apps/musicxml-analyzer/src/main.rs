@@ -402,6 +402,7 @@ fn generate_pitch_diversity_key_diversity_correlation_chart(
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 fn generate_scatter_plot<F, G>(
     data: &[PieceData],
     output_path: &str,
