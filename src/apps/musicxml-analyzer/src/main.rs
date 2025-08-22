@@ -12,7 +12,8 @@ struct PieceData {
     name: String,
     avg_density: f64,
     peak_density: f64,
-    diversity: u32,
+    pitch_diversity: u32,
+    key_diversity: u32,
     total_note_count: u32,
 }
 
@@ -113,6 +114,16 @@ fn main() {
         } else {
             println!("Note count vs diversity correlation saved to: {correlation_path}");
         }
+
+        let correlation_path =
+            format!("{output_dir}/pitch_diversity_key_diversity_correlation.svg");
+        if let Err(e) =
+            generate_pitch_diversity_key_diversity_correlation_chart(&piece_data, &correlation_path)
+        {
+            eprintln!("Failed to generate pitch vs key diversity chart: {e}");
+        } else {
+            println!("Pitch vs key diversity correlation saved to: {correlation_path}");
+        }
     } else {
         println!("Skipping chart generation (need multiple pieces for meaningful charts)");
     }
@@ -170,7 +181,8 @@ fn analyze_single_file(file_path: &str) -> Result<PieceData, String> {
         name,
         avg_density: density.average_notes_per_second,
         peak_density: density.peak_notes_per_second,
-        diversity: diversity.total_unique_pitches,
+        pitch_diversity: diversity.total_unique_pitches,
+        key_diversity: diversity.total_unique_keys,
         total_note_count: density.total_note_count,
     })
 }
@@ -201,7 +213,8 @@ fn print_piece_results(piece: &PieceData) {
     println!("  Peak   : {:>5.2} notes/second", piece.peak_density);
     println!("  # notes: {}", piece.total_note_count);
     println!("Pitch Diversity:");
-    println!("  # unique pitches: {}", piece.diversity);
+    println!("  # unique pitches: {}", piece.pitch_diversity);
+    println!("  # unique piano keys: {}", piece.key_diversity);
 }
 
 fn generate_note_density_histogram(
@@ -255,7 +268,7 @@ fn generate_pitch_diversity_histogram(
     let root = SVGBackend::new(output_path, (800, 600)).into_drawing_area();
     root.fill(&WHITE)?;
 
-    let diversities: Vec<u32> = data.iter().map(|d| d.diversity).collect();
+    let diversities: Vec<u32> = data.iter().map(|d| d.pitch_diversity).collect();
     let max_diversity = *diversities.iter().max().unwrap();
 
     // Create 10 bins
@@ -297,7 +310,7 @@ fn generate_note_density_pitch_diversity_correlation_chart(
     output_path: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let x_values: Vec<f64> = data.iter().map(|d| d.avg_density).collect();
-    let y_values: Vec<f64> = data.iter().map(|d| d.diversity as f64).collect();
+    let y_values: Vec<f64> = data.iter().map(|d| d.pitch_diversity as f64).collect();
     let correlation = calculate_pearson_correlation(&x_values, &y_values);
     println!(
         "Note Density vs Pitch Diversity correlation: r = {:.3}",
@@ -311,7 +324,7 @@ fn generate_note_density_pitch_diversity_correlation_chart(
         "Average Note Density (notes/second)",
         "Unique Pitches",
         |piece| piece.avg_density,
-        |piece| piece.diversity as f64,
+        |piece| piece.pitch_diversity as f64,
         BLUE,
     )
 }
@@ -345,7 +358,7 @@ fn generate_note_count_pitch_diversity_correlation_chart(
     output_path: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let x_values: Vec<f64> = data.iter().map(|d| d.total_note_count as f64).collect();
-    let y_values: Vec<f64> = data.iter().map(|d| d.diversity as f64).collect();
+    let y_values: Vec<f64> = data.iter().map(|d| d.pitch_diversity as f64).collect();
     let correlation = calculate_pearson_correlation(&x_values, &y_values);
     println!(
         "Note Count vs Pitch Diversity correlation: r = {:.3}",
@@ -359,8 +372,33 @@ fn generate_note_count_pitch_diversity_correlation_chart(
         "Total Note Count",
         "Unique Pitches",
         |piece| piece.total_note_count as f64,
-        |piece| piece.diversity as f64,
+        |piece| piece.pitch_diversity as f64,
         RED,
+    )
+}
+
+fn generate_pitch_diversity_key_diversity_correlation_chart(
+    data: &[PieceData],
+    output_path: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let x_values: Vec<f64> = data.iter().map(|d| d.pitch_diversity as f64).collect();
+    let y_values: Vec<f64> = data.iter().map(|d| d.key_diversity as f64).collect();
+    let correlation = calculate_pearson_correlation(&x_values, &y_values);
+
+    println!(
+        "Pitch Diversity vs Key Diversity correlation: r = {:.3}",
+        correlation
+    );
+
+    generate_scatter_plot(
+        data,
+        output_path,
+        &format!("Pitch Diversity vs Key Diversity (r = {:.3})", correlation),
+        "Unique Pitches",
+        "Unique Piano Keys",
+        |piece| piece.pitch_diversity as f64,
+        |piece| piece.key_diversity as f64,
+        MAGENTA,
     )
 }
 
