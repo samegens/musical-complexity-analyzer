@@ -1,6 +1,7 @@
 use musicxml_analysis::analysis::calculate_density_metrics;
 use musicxml_analysis::analysis::calculate_diversity_metrics;
 use musicxml_analysis::extraction::musicxml::extract_measure_data;
+use musicxml_analysis::statistics::correlation::calculate_pearson_correlation;
 use plotters::prelude::*;
 use std::fs;
 use std::path::Path;
@@ -295,10 +296,18 @@ fn generate_note_density_pitch_diversity_correlation_chart(
     data: &[PieceData],
     output_path: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    let x_values: Vec<f64> = data.iter().map(|d| d.avg_density).collect();
+    let y_values: Vec<f64> = data.iter().map(|d| d.diversity as f64).collect();
+    let correlation = calculate_pearson_correlation(&x_values, &y_values);
+    println!(
+        "Note Density vs Pitch Diversity correlation: r = {:.3}",
+        correlation
+    );
+
     generate_scatter_plot(
         data,
         output_path,
-        "Note Density vs Pitch Diversity",
+        &format!("Note Density vs Pitch Diversity (r = {:.3})", correlation),
         "Average Note Density (notes/second)",
         "Unique Pitches",
         |piece| piece.avg_density,
@@ -311,10 +320,18 @@ fn generate_note_count_note_density_correlation_chart(
     data: &[PieceData],
     output_path: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    let x_values: Vec<f64> = data.iter().map(|d| d.total_note_count as f64).collect();
+    let y_values: Vec<f64> = data.iter().map(|d| d.avg_density).collect();
+    let correlation = calculate_pearson_correlation(&x_values, &y_values);
+    println!(
+        "Note Count vs Note Density correlation: r = {:.3}",
+        correlation
+    );
+
     generate_scatter_plot(
         data,
         output_path,
-        "Note Count vs Average Note Density",
+        &format!("Note Count vs Avg Note Density (r = {:.3})", correlation),
         "Total Note Count",
         "Average Note Density (notes/second)",
         |piece| piece.total_note_count as f64,
@@ -327,10 +344,18 @@ fn generate_note_count_pitch_diversity_correlation_chart(
     data: &[PieceData],
     output_path: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    let x_values: Vec<f64> = data.iter().map(|d| d.total_note_count as f64).collect();
+    let y_values: Vec<f64> = data.iter().map(|d| d.diversity as f64).collect();
+    let correlation = calculate_pearson_correlation(&x_values, &y_values);
+    println!(
+        "Note Count vs Pitch Diversity correlation: r = {:.3}",
+        correlation
+    );
+
     generate_scatter_plot(
         data,
         output_path,
-        "Note Count vs Pitch Diversity",
+        &format!("Note Count vs Pitch Diversity (r = {:.3})", correlation),
         "Total Note Count",
         "Unique Pitches",
         |piece| piece.total_note_count as f64,
