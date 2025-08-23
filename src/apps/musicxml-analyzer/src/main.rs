@@ -87,6 +87,11 @@ fn main() {
             eprintln!("Failed to generate pitch diversity chart: {e}");
         }
 
+        let note_count_base = format!("{output_dir}/note_count_histogram");
+        if let Err(e) = generate_note_count_histogram(&piece_data, &note_count_base) {
+            eprintln!("Failed to generate note count histogram: {e}");
+        }
+
         let correlation_base = format!("{output_dir}/note_density_pitch_diversity_correlation");
         if let Err(e) =
             generate_note_density_pitch_diversity_correlation_chart(&piece_data, &correlation_base)
@@ -237,7 +242,19 @@ fn generate_pitch_diversity_histogram(
         RED,
     )
 }
-
+fn generate_note_count_histogram(
+    data: &[PieceData],
+    output_path_without_extension: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    generate_histogram(
+        data,
+        output_path_without_extension,
+        |d| d.total_note_count as f64,
+        "Note Count Distribution",
+        "Total Note Count",
+        GREEN,
+    )
+}
 fn generate_histogram<F>(
     data: &[PieceData],
     output_path_without_extension: &str,
