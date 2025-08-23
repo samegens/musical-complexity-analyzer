@@ -6,4 +6,5 @@ edition = "2024"
 [dependencies]
 musicxml = "1.1.2"
 musicxml-analysis = { version = "0.1.0", path = "../../crates/musicxml-analysis" }
+plotly = "0.13.5"
 plotters = "0.3.7"

@@ -2,6 +2,10 @@ use musicxml_analysis::analysis::calculate_density_metrics;
 use musicxml_analysis::analysis::calculate_diversity_metrics;
 use musicxml_analysis::extraction::musicxml::extract_measure_data;
 use musicxml_analysis::statistics::correlation::calculate_pearson_correlation;
+use plotly::{
+    Layout, Plot, Scatter,
+    common::{Mode, Title},
+};
 use plotters::prelude::*;
 use std::fs;
 use std::path::Path;
@@ -73,56 +77,45 @@ fn main() {
     if piece_data.len() > 1 {
         println!("Generating charts...");
 
-        let density_path = format!("{output_dir}/note_density_histogram.svg");
-
-        if let Err(e) = generate_note_density_histogram(&piece_data, &density_path) {
+        let density_base = format!("{output_dir}/note_density_histogram");
+        if let Err(e) = generate_note_density_histogram(&piece_data, &density_base) {
             eprintln!("Failed to generate note density chart: {e}");
-        } else {
-            println!("Note density histogram saved to: {density_path}");
         }
 
-        let diversity_path = format!("{output_dir}/pitch_diversity_histogram.svg");
-        if let Err(e) = generate_pitch_diversity_histogram(&piece_data, &diversity_path) {
+        let diversity_base = format!("{output_dir}/pitch_diversity_histogram");
+        if let Err(e) = generate_pitch_diversity_histogram(&piece_data, &diversity_base) {
             eprintln!("Failed to generate pitch diversity chart: {e}");
-        } else {
-            println!("Pitch diversity histogram saved to: {diversity_path}");
         }
 
-        let correlation_path = format!("{output_dir}/note_density_pitch_diversity_correlation.svg");
+        let correlation_base = format!("{output_dir}/note_density_pitch_diversity_correlation");
         if let Err(e) =
-            generate_note_density_pitch_diversity_correlation_chart(&piece_data, &correlation_path)
+            generate_note_density_pitch_diversity_correlation_chart(&piece_data, &correlation_base)
         {
             eprintln!("Failed to generate correlation chart: {e}");
-        } else {
-            println!("Correlation chart saved to: {correlation_path}");
         }
 
-        let correlation_path = format!("{output_dir}/note_count_note_density_correlation.svg");
-        if let Err(e) =
-            generate_note_count_note_density_correlation_chart(&piece_data, &correlation_path)
-        {
+        let note_count_density_base = format!("{output_dir}/note_count_note_density_correlation");
+        if let Err(e) = generate_note_count_note_density_correlation_chart(
+            &piece_data,
+            &note_count_density_base,
+        ) {
             eprintln!("Failed to generate note count vs density chart: {e}");
-        } else {
-            println!("Note count vs density correlation saved to: {correlation_path}");
         }
 
-        let correlation_path = format!("{output_dir}/note_count_pitch_diversity_correlation.svg");
-        if let Err(e) =
-            generate_note_count_pitch_diversity_correlation_chart(&piece_data, &correlation_path)
-        {
+        let note_count_diversity_base =
+            format!("{output_dir}/note_count_pitch_diversity_correlation");
+        if let Err(e) = generate_note_count_pitch_diversity_correlation_chart(
+            &piece_data,
+            &note_count_diversity_base,
+        ) {
             eprintln!("Failed to generate note count vs diversity chart: {e}");
-        } else {
-            println!("Note count vs diversity correlation saved to: {correlation_path}");
         }
 
-        let correlation_path =
-            format!("{output_dir}/pitch_diversity_key_diversity_correlation.svg");
+        let pitch_key_base = format!("{output_dir}/pitch_diversity_key_diversity_correlation");
         if let Err(e) =
-            generate_pitch_diversity_key_diversity_correlation_chart(&piece_data, &correlation_path)
+            generate_pitch_diversity_key_diversity_correlation_chart(&piece_data, &pitch_key_base)
         {
             eprintln!("Failed to generate pitch vs key diversity chart: {e}");
-        } else {
-            println!("Pitch vs key diversity correlation saved to: {correlation_path}");
         }
     } else {
         println!("Skipping chart generation (need multiple pieces for meaningful charts)");
@@ -219,9 +212,10 @@ fn print_piece_results(piece: &PieceData) {
 
 fn generate_note_density_histogram(
     data: &[PieceData],
-    output_path: &str,
+    output_path_without_extension: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let root = SVGBackend::new(output_path, (800, 600)).into_drawing_area();
+    let output_path = format!("{output_path_without_extension}.svg");
+    let root = SVGBackend::new(&output_path, (800, 600)).into_drawing_area();
     root.fill(&WHITE)?;
 
     let densities: Vec<f64> = data.iter().map(|d| d.avg_density).collect();
@@ -263,9 +257,10 @@ fn generate_note_density_histogram(
 
 fn generate_pitch_diversity_histogram(
     data: &[PieceData],
-    output_path: &str,
+    output_path_without_extension: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let root = SVGBackend::new(output_path, (800, 600)).into_drawing_area();
+    let output_path = format!("{output_path_without_extension}.svg");
+    let root = SVGBackend::new(&output_path, (800, 600)).into_drawing_area();
     root.fill(&WHITE)?;
 
     let diversities: Vec<u32> = data.iter().map(|d| d.pitch_diversity).collect();
@@ -307,7 +302,7 @@ fn generate_pitch_diversity_histogram(
 
 fn generate_note_density_pitch_diversity_correlation_chart(
     data: &[PieceData],
-    output_path: &str,
+    output_path_without_extension: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let x_values: Vec<f64> = data.iter().map(|d| d.avg_density).collect();
     let y_values: Vec<f64> = data.iter().map(|d| d.pitch_diversity as f64).collect();
@@ -319,8 +314,8 @@ fn generate_note_density_pitch_diversity_correlation_chart(
 
     generate_scatter_plot(
         data,
-        output_path,
-        &format!("Note Density vs Pitch Diversity (r = {:.3})", correlation),
+        output_path_without_extension,
+        "Note Density vs Pitch Diversity",
         "Average Note Density (notes/second)",
         "Unique Pitches",
         |piece| piece.avg_density,
@@ -331,7 +326,7 @@ fn generate_note_density_pitch_diversity_correlation_chart(
 
 fn generate_note_count_note_density_correlation_chart(
     data: &[PieceData],
-    output_path: &str,
+    output_path_without_extension: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let x_values: Vec<f64> = data.iter().map(|d| d.total_note_count as f64).collect();
     let y_values: Vec<f64> = data.iter().map(|d| d.avg_density).collect();
@@ -343,8 +338,8 @@ fn generate_note_count_note_density_correlation_chart(
 
     generate_scatter_plot(
         data,
-        output_path,
-        &format!("Note Count vs Avg Note Density (r = {:.3})", correlation),
+        output_path_without_extension,
+        "Note Count vs Avg Note Density",
         "Total Note Count",
         "Average Note Density (notes/second)",
         |piece| piece.total_note_count as f64,
@@ -355,7 +350,7 @@ fn generate_note_count_note_density_correlation_chart(
 
 fn generate_note_count_pitch_diversity_correlation_chart(
     data: &[PieceData],
-    output_path: &str,
+    output_path_without_extension: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let x_values: Vec<f64> = data.iter().map(|d| d.total_note_count as f64).collect();
     let y_values: Vec<f64> = data.iter().map(|d| d.pitch_diversity as f64).collect();
@@ -367,8 +362,8 @@ fn generate_note_count_pitch_diversity_correlation_chart(
 
     generate_scatter_plot(
         data,
-        output_path,
-        &format!("Note Count vs Pitch Diversity (r = {:.3})", correlation),
+        output_path_without_extension,
+        "Note Count vs Pitch Diversity",
         "Total Note Count",
         "Unique Pitches",
         |piece| piece.total_note_count as f64,
@@ -379,7 +374,7 @@ fn generate_note_count_pitch_diversity_correlation_chart(
 
 fn generate_pitch_diversity_key_diversity_correlation_chart(
     data: &[PieceData],
-    output_path: &str,
+    output_path_without_extension: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let x_values: Vec<f64> = data.iter().map(|d| d.pitch_diversity as f64).collect();
     let y_values: Vec<f64> = data.iter().map(|d| d.key_diversity as f64).collect();
@@ -392,8 +387,8 @@ fn generate_pitch_diversity_key_diversity_correlation_chart(
 
     generate_scatter_plot(
         data,
-        output_path,
-        &format!("Pitch Diversity vs Key Diversity (r = {:.3})", correlation),
+        output_path_without_extension,
+        "Pitch Diversity vs Key Diversity",
         "Unique Pitches",
         "Unique Piano Keys",
         |piece| piece.pitch_diversity as f64,
@@ -405,51 +400,48 @@ fn generate_pitch_diversity_key_diversity_correlation_chart(
 #[allow(clippy::too_many_arguments)]
 fn generate_scatter_plot<F, G>(
     data: &[PieceData],
-    output_path: &str,
+    output_path_without_extension: &str,
     title: &str,
     x_label: &str,
     y_label: &str,
     x_extractor: F,
     y_extractor: G,
-    color: RGBColor,
+    _color: RGBColor,
 ) -> Result<(), Box<dyn std::error::Error>>
 where
     F: Fn(&PieceData) -> f64,
     G: Fn(&PieceData) -> f64,
 {
-    let root = SVGBackend::new(output_path, (800, 600)).into_drawing_area();
-    root.fill(&WHITE)?;
-
     let x_values: Vec<f64> = data.iter().map(&x_extractor).collect();
     let y_values: Vec<f64> = data.iter().map(&y_extractor).collect();
+    let names: Vec<String> = data.iter().map(|d| d.name.clone()).collect();
 
-    let max_x = x_values.iter().fold(0.0f64, |a, &b| a.max(b));
-    let max_y = y_values.iter().fold(0.0f64, |a, &b| a.max(b));
+    // Calculate correlation for title
+    let correlation = calculate_pearson_correlation(&x_values, &y_values);
+    let full_title = format!("{} (r = {:.3})", title, correlation);
 
-    let mut chart = ChartBuilder::on(&root)
-        .caption(title, ("sans-serif", 40))
-        .margin(20)
-        .x_label_area_size(60)
-        .y_label_area_size(60)
-        .build_cartesian_2d(0f64..max_x * 1.1, 0f64..max_y * 1.1)?;
+    let trace = Scatter::new(x_values, y_values)
+        .name("Musical Pieces")
+        .text_array(names)
+        .mode(Mode::Markers)
+        .marker(plotly::common::Marker::new().size(8));
 
-    chart
-        .configure_mesh()
-        .x_desc(x_label)
-        .y_desc(y_label)
-        .draw()?;
+    let mut plot = Plot::new();
+    plot.add_trace(trace);
 
-    chart
-        .draw_series(
-            data.iter().map(|piece| {
-                Circle::new((x_extractor(piece), y_extractor(piece)), 5, color.filled())
-            }),
-        )?
-        .label("Musical Pieces")
-        .legend(|(x, y)| Circle::new((x + 10, y), 3, color.filled()));
+    let layout = Layout::new()
+        .title(Title::from(&full_title))
+        .x_axis(plotly::layout::Axis::new().title(Title::from(x_label)))
+        .y_axis(plotly::layout::Axis::new().title(Title::from(y_label)))
+        .height(800)
+        .auto_size(true);
 
-    chart.configure_series_labels().draw()?;
+    plot.set_layout(layout);
 
-    root.present()?;
+    let html_path = format!("{}.html", output_path_without_extension);
+    let html_content = plot.to_html();
+    std::fs::write(&html_path, html_content)?;
+
+    println!("Interactive chart saved to: {}", html_path);
     Ok(())
 }
