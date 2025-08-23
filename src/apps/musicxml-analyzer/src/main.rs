@@ -214,89 +214,88 @@ fn generate_note_density_histogram(
     data: &[PieceData],
     output_path_without_extension: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let output_path = format!("{output_path_without_extension}.svg");
-    let root = SVGBackend::new(&output_path, (800, 600)).into_drawing_area();
-    root.fill(&WHITE)?;
-
-    let densities: Vec<f64> = data.iter().map(|d| d.avg_density).collect();
-    let max_density = densities.iter().fold(0.0f64, |a, &b| a.max(b));
-
-    // Create 10 bins
-    let bin_size = max_density / 10.0;
-    let mut bins = [0; 10];
-
-    for density in &densities {
-        let bin_index = ((density / bin_size) as usize).min(9);
-        bins[bin_index] += 1;
-    }
-
-    let max_count = *bins.iter().max().unwrap();
-
-    let mut chart = ChartBuilder::on(&root)
-        .caption("Note Density Distribution", ("sans-serif", 40))
-        .margin(20)
-        .x_label_area_size(60)
-        .y_label_area_size(60)
-        .build_cartesian_2d(0f64..max_density, 0..(max_count + 1))?;
-
-    chart
-        .configure_mesh()
-        .x_desc("Average Note Density (notes/second)")
-        .y_desc("Number of Pieces")
-        .draw()?;
-
-    chart.draw_series(bins.iter().enumerate().map(|(i, &count)| {
-        let x0 = i as f64 * bin_size;
-        let x1 = (i + 1) as f64 * bin_size;
-        Rectangle::new([(x0, 0), (x1, count)], BLUE.filled())
-    }))?;
-
-    root.present()?;
-    Ok(())
+    generate_histogram(
+        data,
+        output_path_without_extension,
+        |d| d.avg_density,
+        "Note Density Distribution",
+        "Average Note Density (notes/second)",
+        BLUE,
+    )
 }
 
 fn generate_pitch_diversity_histogram(
     data: &[PieceData],
     output_path_without_extension: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    generate_histogram(
+        data,
+        output_path_without_extension,
+        |d| d.pitch_diversity as f64,
+        "Pitch Diversity Distribution",
+        "Unique Pitches",
+        RED,
+    )
+}
+
+fn generate_histogram<F>(
+    data: &[PieceData],
+    output_path_without_extension: &str,
+    value_extractor: F,
+    title: &str,
+    x_desc: &str,
+    color: RGBColor,
+) -> Result<(), Box<dyn std::error::Error>>
+where
+    F: Fn(&PieceData) -> f64,
+{
     let output_path = format!("{output_path_without_extension}.svg");
     let root = SVGBackend::new(&output_path, (800, 600)).into_drawing_area();
     root.fill(&WHITE)?;
 
-    let diversities: Vec<u32> = data.iter().map(|d| d.pitch_diversity).collect();
-    let max_diversity = *diversities.iter().max().unwrap();
+    let values: Vec<f64> = data.iter().map(&value_extractor).collect();
+    let max_value = values.iter().cloned().fold(f64::NAN, f64::max); // NaN-safe max
+    let min_value = 0.0;
 
-    // Create 10 bins
-    let bin_size = max_diversity.div_ceil(10);
-    let mut bins = [0; 10];
+    let bin_count = 10;
+    let bin_size = (max_value - min_value) / bin_count as f64;
 
-    for diversity in &diversities {
-        let bin_index = ((diversity / bin_size) as usize).min(9);
+    let mut bins = vec![0; bin_count];
+
+    for &value in &values {
+        let bin_index = if bin_size > 0.0 {
+            ((value - min_value) / bin_size).floor() as usize
+        } else {
+            0
+        }
+        .min(bin_count - 1);
         bins[bin_index] += 1;
     }
 
-    let max_count = *bins.iter().max().unwrap();
+    let max_count = *bins.iter().max().unwrap_or(&1);
 
     let mut chart = ChartBuilder::on(&root)
-        .caption("Pitch Diversity Distribution", ("sans-serif", 40))
+        .caption(title, ("sans-serif", 40))
         .margin(20)
         .x_label_area_size(60)
         .y_label_area_size(60)
-        .build_cartesian_2d(0..max_diversity, 0..(max_count + 1))?;
+        .build_cartesian_2d(min_value..max_value, 0..(max_count + 1))?;
 
     chart
         .configure_mesh()
-        .x_desc("Unique Pitches")
+        .x_desc(x_desc)
         .y_desc("Number of Pieces")
         .draw()?;
 
     chart.draw_series(bins.iter().enumerate().map(|(i, &count)| {
-        let x0 = i as u32 * bin_size;
-        let x1 = (i + 1) as u32 * bin_size;
-        Rectangle::new([(x0, 0), (x1, count)], RED.filled())
+        let x0 = min_value + i as f64 * bin_size;
+        let x1 = min_value + (i + 1) as f64 * bin_size;
+        Rectangle::new([(x0, 0), (x1, count)], color.filled())
     }))?;
 
     root.present()?;
+    println!("Chart saved to: {output_path}");
+
     Ok(())
 }
 
